@@ -1,0 +1,1663 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Личный бюджет</title>
+<meta name="description" content="Личный планер бюджета: поступления, конверты, платежи и история. Работает без интернета.">
+<meta name="theme-color" content="#F5F2EA" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#13160F" media="(prefers-color-scheme: dark)">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" type="image/png" href="icons/icon-192.png">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Бюджет">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<style>
+:root{color-scheme:light;padding-top:env(safe-area-inset-top,0px)}
+body{margin:0}
+/* Макет: одна колонка до 520px, большие числа, нижняя навигация и «листы» снизу под большой палец.
+   Палитра: молочный фон, оливково-зелёный акцент, приглушённые янтарный и кирпичный для состояний. */
+:root{
+  --bg:#F5F2EA;--surface:#FFFDF8;--surface2:#EEEADD;--ink:#262A21;--muted:#6B7062;--line:#E3DECF;
+  --accent:#5B7545;--accent-ink:#FFFFFF;--accent-soft:#E2E9D5;--accent-deep:#3E5430;
+  --warn:#9A6A12;--warn-soft:#F4E7C9;--bad:#A24B38;--bad-soft:#F3DED6;--good:#4C7A3A;
+  --scrim:rgba(24,26,18,.45);
+  --f-ui:'Golos Text',system-ui,-apple-system,'Segoe UI',Roboto,sans-serif;
+  --f-num:'Geologica','Golos Text',system-ui,-apple-system,'Segoe UI',sans-serif;
+  --r:20px;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#13160F;--surface:#1B1F16;--surface2:#252A1D;--ink:#ECEADF;--muted:#A1A693;--line:#2D3226;
+  --accent:#A2BF88;--accent-ink:#17200F;--accent-soft:#2A3420;--accent-deep:#C4DAAB;
+  --warn:#E2B55E;--warn-soft:#3A301A;--bad:#E48D78;--bad-soft:#3E2620;--good:#9CC882;--scrim:rgba(0,0,0,.6);color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#13160F;--surface:#1B1F16;--surface2:#252A1D;--ink:#ECEADF;--muted:#A1A693;--line:#2D3226;
+  --accent:#A2BF88;--accent-ink:#17200F;--accent-soft:#2A3420;--accent-deep:#C4DAAB;
+  --warn:#E2B55E;--warn-soft:#3A301A;--bad:#E48D78;--bad-soft:#3E2620;--good:#9CC882;--scrim:rgba(0,0,0,.6);color-scheme:dark}
+
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{min-height:100%}
+body{background:var(--bg);color:var(--ink);font-family:var(--f-ui);font-size:16px;line-height:1.4;padding-inline:16px;padding-block:0;overflow-x:hidden}
+button,input,select,textarea{font:inherit;color:inherit}
+button{cursor:pointer;border:0;background:none;padding:0}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.app{max-width:520px;margin:0 auto;padding-block:14px 150px;min-width:0}
+h1,h2,h3{margin:0;font-weight:600;text-wrap:balance}
+p{margin:0}
+.num{font-family:var(--f-num);font-variant-numeric:tabular-nums;letter-spacing:-.02em}
+.muted{color:var(--muted)}
+.sm{font-size:14px}
+.xs{font-size:13px}
+.row{display:flex;align-items:center;gap:10px;min-width:0}
+.sp{flex:1;min-width:0}
+.stack{display:flex;flex-direction:column;gap:12px}
+.ell{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.pos{color:var(--good)}.neg{color:var(--bad)}.warnc{color:var(--warn)}
+
+/* шапка */
+.top{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:14px}
+.mbar{display:flex;align-items:center;gap:2px}
+.mbar .m{font-family:var(--f-num);font-weight:600;font-size:19px;min-width:150px;text-align:center}
+.ib{width:44px;height:44px;border-radius:50%;display:grid;place-items:center;color:var(--ink)}
+.ib:active{background:var(--surface2)}
+.ib svg,.nav svg,.fab svg{width:22px;height:22px;stroke:currentColor;fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+.pagetitle{font-family:var(--f-num);font-size:26px;font-weight:600;letter-spacing:-.02em}
+
+/* карточки */
+.card{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);padding:16px}
+.hero{background:var(--accent-deep);color:#F4F7EC;border-radius:28px;padding:22px 20px 20px;border:0}
+:root[data-theme="dark"] .hero{color:#17200F}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]) .hero{color:#17200F}}
+.hero .eyebrow{font-size:14px;opacity:.85}
+.hero .big{font-family:var(--f-num);font-weight:600;font-size:46px;letter-spacing:-.03em;line-height:1.1;margin:4px 0 14px;font-variant-numeric:tabular-nums;overflow-wrap:anywhere}
+.split{height:8px;border-radius:99px;background:rgba(255,255,255,.22);overflow:hidden}
+.split i{display:block;height:100%;background:rgba(255,255,255,.9);border-radius:99px}
+:root[data-theme="dark"] .split{background:rgba(0,0,0,.2)}:root[data-theme="dark"] .split i{background:rgba(0,0,0,.65)}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]) .split{background:rgba(0,0,0,.2)}:root:not([data-theme="light"]) .split i{background:rgba(0,0,0,.65)}}
+.legend{display:flex;justify-content:space-between;gap:10px;font-size:14px;margin-top:10px;flex-wrap:wrap}
+.safe{background:var(--accent-soft);border-radius:var(--r);padding:16px 18px;border:0}
+.safe .lab{font-size:14px;color:var(--accent-deep)}
+.safe .v{font-family:var(--f-num);font-size:32px;font-weight:600;letter-spacing:-.02em;color:var(--accent-deep);font-variant-numeric:tabular-nums}
+.safe p{font-size:14px;color:var(--muted);margin-top:2px}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.stat{background:var(--surface);border:1px solid var(--line);border-radius:18px;padding:14px;min-width:0}
+.stat .l{font-size:13.5px;color:var(--muted)}
+.stat .v{font-family:var(--f-num);font-size:22px;font-weight:600;margin-top:2px;font-variant-numeric:tabular-nums;letter-spacing:-.02em;overflow-wrap:anywhere}
+.sect{display:flex;align-items:baseline;justify-content:space-between;margin:26px 2px 10px;gap:10px}
+.sect h2{font-size:18px}
+.link{color:var(--accent-deep);font-weight:500;font-size:15px;min-height:44px;display:inline-flex;align-items:center}
+.banner{border-radius:16px;padding:12px 14px;font-size:14.5px;display:flex;gap:10px;align-items:flex-start;background:var(--warn-soft);color:var(--ink)}
+.banner.bad{background:var(--bad-soft)}.banner.good{background:var(--accent-soft)}
+.banner b{font-weight:600}
+
+/* кнопки */
+.btn{min-height:50px;border-radius:16px;padding:0 18px;font-weight:600;display:inline-flex;align-items:center;justify-content:center;gap:8px;background:var(--surface2);color:var(--ink);text-align:center;line-height:1.2}
+.btn.primary{background:var(--accent);color:var(--accent-ink)}
+.btn.soft{background:var(--accent-soft);color:var(--accent-deep)}
+.btn.danger{background:var(--bad-soft);color:var(--bad)}
+.btn.ghost{background:transparent;border:1px solid var(--line)}
+.btn.sm{min-height:40px;border-radius:12px;padding:0 14px;font-size:15px}
+.btn.block{width:100%}
+.btn:disabled{opacity:.45;cursor:default}
+.btn:active:not(:disabled){transform:scale(.985)}
+.quick{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px}
+.quick .btn{flex-direction:column;gap:2px;padding:8px 6px;min-height:62px;font-size:14px}
+.quick .btn.primary{grid-column:1/-1;flex-direction:row;min-height:56px;font-size:17px}
+
+/* списки */
+.list{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);overflow:hidden}
+.li{display:flex;align-items:center;gap:12px;padding:13px 16px;min-height:60px;width:100%;text-align:left}
+.li + .li{border-top:1px solid var(--line)}
+button.li:active{background:var(--surface2)}
+.li .t{font-weight:500;overflow-wrap:anywhere}
+.li .s{font-size:14px;color:var(--muted)}
+.amt{font-family:var(--f-num);font-weight:600;font-variant-numeric:tabular-nums;white-space:nowrap;letter-spacing:-.01em}
+.pill{display:inline-block;font-size:12.5px;font-weight:500;padding:3px 9px;border-radius:99px;background:var(--surface2);color:var(--muted);white-space:nowrap}
+.pill.ok{background:var(--accent-soft);color:var(--accent-deep)}
+.pill.warn{background:var(--warn-soft);color:var(--warn)}
+.pill.bad{background:var(--bad-soft);color:var(--bad)}
+.chk{width:44px;height:44px;border-radius:50%;border:2px solid var(--line);display:grid;place-items:center;flex:none;color:transparent}
+.chk.on{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
+.chk svg{width:20px;height:20px;stroke:currentColor;fill:none;stroke-width:2.4;stroke-linecap:round;stroke-linejoin:round}
+
+/* конверты */
+.gh{display:flex;justify-content:space-between;align-items:baseline;margin:22px 4px 8px;gap:10px}
+.gh h3{font-size:15px;color:var(--muted);font-weight:500;text-transform:uppercase;letter-spacing:.06em}
+.cat{padding:14px 16px;display:block;width:100%;text-align:left}
+.cat + .cat{border-top:1px solid var(--line)}
+button.cat:active{background:var(--surface2)}
+.cat .nm{font-weight:500}
+.prog{height:7px;border-radius:99px;background:var(--surface2);overflow:hidden;margin-top:9px}
+.prog i{display:block;height:100%;border-radius:99px;background:var(--accent)}
+.prog.warn i{background:var(--warn)}.prog.bad i{background:var(--bad)}
+.mini{display:flex;gap:14px;font-size:13.5px;color:var(--muted);margin-top:6px;flex-wrap:wrap}
+.mini b{font-weight:500;color:var(--ink)}
+.cols4{display:grid;grid-template-columns:repeat(2,1fr);gap:10px 14px;margin-top:10px}
+.cols4 div{min-width:0}.cols4 .l{font-size:13px;color:var(--muted)}.cols4 .v{font-family:var(--f-num);font-weight:600;font-variant-numeric:tabular-nums;font-size:16px}
+
+/* навигация */
+.nav{position:fixed;left:0;right:0;bottom:0;background:color-mix(in srgb,var(--surface) 94%,transparent);backdrop-filter:blur(10px);border-top:1px solid var(--line);padding:6px 8px calc(6px + env(safe-area-inset-bottom,0px));z-index:20}
+.nav > div{max-width:520px;margin:0 auto;display:grid;grid-template-columns:repeat(5,1fr);gap:2px;align-items:center}
+.nav button{display:flex;flex-direction:column;align-items:center;gap:2px;padding:6px 2px;min-height:56px;border-radius:14px;color:var(--muted);font-size:12.5px;font-weight:500}
+.nav button.on{color:var(--accent-deep);background:var(--accent-soft)}
+.fab{position:fixed;right:max(16px,calc(50% - 244px));bottom:calc(84px + env(safe-area-inset-bottom,0px));width:60px;height:60px;border-radius:50%;background:var(--accent);color:var(--accent-ink);display:grid;place-items:center;z-index:19;box-shadow:0 6px 18px rgba(30,40,20,.28)}
+.fab svg{width:28px;height:28px;stroke-width:2.2}
+
+/* листы */
+.ov{position:fixed;inset:0;background:var(--scrim);z-index:50;display:flex;align-items:flex-end;justify-content:center;animation:fade .15s ease-out}
+.sheet{width:100%;max-width:520px;max-height:92%;overflow-y:auto;overscroll-behavior:contain;background:var(--surface);border-radius:26px 26px 0 0;padding:10px 18px calc(20px + env(safe-area-inset-bottom,0px));animation:up .2s ease-out}
+.sheet .grab{width:42px;height:5px;border-radius:9px;background:var(--line);margin:0 auto 14px}
+.sheet h2{font-family:var(--f-num);font-size:22px;letter-spacing:-.02em;margin-bottom:4px}
+.sheet .foot{position:sticky;bottom:calc(-20px - env(safe-area-inset-bottom,0px));background:var(--surface);padding:12px 0 2px;margin-top:14px;display:flex;gap:10px;flex-direction:column}
+@keyframes up{from{transform:translateY(40px);opacity:.5}}
+@keyframes fade{from{opacity:0}}
+.page{position:fixed;inset:0;background:var(--bg);z-index:40;overflow-y:auto;padding:0 16px calc(40px + env(safe-area-inset-bottom,0px));padding-top:env(safe-area-inset-top,0px)}
+.page > .in{max-width:520px;margin:0 auto;padding-block:12px 40px}
+.toast{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(150px + env(safe-area-inset-bottom,0px));background:var(--ink);color:var(--bg);padding:12px 18px;border-radius:14px;z-index:90;font-size:15px;max-width:calc(100% - 32px);text-align:center;animation:fade .15s}
+
+/* формы */
+label.f{display:block;font-size:14px;color:var(--muted);margin:14px 0 6px}
+.in,.sel,.ta{width:100%;min-height:50px;border-radius:14px;border:1.5px solid var(--line);background:var(--bg);padding:0 14px;font-size:16px}
+.ta{padding:12px 14px;min-height:80px;resize:vertical}
+.in:focus,.sel:focus,.ta:focus{border-color:var(--accent);outline:0}
+.in.err{border-color:var(--bad)}
+.bigin{width:100%;border:0;background:transparent;text-align:center;font-family:var(--f-num);font-size:44px;font-weight:600;letter-spacing:-.03em;padding:6px 0;min-width:0;border-bottom:2px solid var(--line);border-radius:0}
+.bigin:focus{outline:0;border-color:var(--accent)}
+.errt{color:var(--bad);font-size:14px;margin-top:6px;min-height:0}
+.chips{display:flex;flex-wrap:wrap;gap:8px}
+.chip{min-height:44px;padding:0 14px;border-radius:99px;background:var(--surface2);font-size:15px;display:inline-flex;align-items:center;gap:6px;border:1.5px solid transparent}
+.chip.on{background:var(--accent-soft);border-color:var(--accent);color:var(--accent-deep);font-weight:500}
+.seg{display:grid;grid-auto-flow:column;grid-auto-columns:1fr;background:var(--surface2);border-radius:14px;padding:4px;gap:4px}
+.seg button{min-height:42px;border-radius:11px;font-weight:500;font-size:15px;color:var(--muted)}
+.seg button.on{background:var(--surface);color:var(--ink);box-shadow:0 1px 2px rgba(0,0,0,.08)}
+.two{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.two > *{min-width:0}
+.empty{text-align:center;padding:34px 20px;color:var(--muted)}
+.empty h3{color:var(--ink);font-size:17px;margin-bottom:6px}
+.empty .btn{margin-top:14px}
+.check{display:flex;gap:12px;align-items:center;min-height:44px}
+.check input{width:22px;height:22px;accent-color:var(--accent)}
+.dots{display:flex;gap:6px;justify-content:center;margin:6px 0 18px}
+.dots i{width:28px;height:5px;border-radius:9px;background:var(--line)}
+.dots i.on{background:var(--accent)}
+.demo{background:var(--warn-soft);border-radius:14px;padding:10px 14px;margin-bottom:12px;font-size:14.5px;display:flex;gap:10px;align-items:center;justify-content:space-between}
+textarea.code{font-family:ui-monospace,Menlo,Consolas,monospace;font-size:12.5px;min-height:140px}
+.hr{height:1px;background:var(--line);margin:14px 0}
+.who{font-size:13.5px;color:var(--muted)}
+.ar{display:flex;align-items:center;gap:10px;padding:10px 0;border-top:1px solid var(--line)}
+.ar:first-child{border-top:0}
+.ar .in{width:132px;min-height:44px;text-align:right;font-family:var(--f-num);font-weight:600;padding:0 12px}
+.datew{position:relative}
+.datew .in{padding-right:50px}
+.calb{position:absolute;right:3px;top:3px;width:44px;height:44px;display:grid;place-items:center;color:var(--muted)}
+.calb svg{width:22px;height:22px;stroke:currentColor;fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round;pointer-events:none}
+.calp{position:absolute;inset:0;width:100%;height:100%;opacity:0;cursor:pointer;border:0;padding:0}
+.nav button.mic{width:60px;height:60px;min-height:0;border-radius:50%;margin:-26px auto 0;padding:0;justify-content:center;background:var(--accent);color:var(--accent-ink);box-shadow:0 6px 16px rgba(30,40,20,.3)}
+.nav button.mic svg{width:28px;height:28px;stroke-width:2}
+.qwrap{position:relative;margin-top:12px}
+.qwrap .in{padding-right:64px;min-height:58px;font-size:18px}
+.micb{position:absolute;right:5px;top:5px;width:48px;height:48px;border-radius:50%;background:var(--accent-soft);color:var(--accent-deep);display:grid;place-items:center}
+.micb svg{width:24px;height:24px;stroke:currentColor;fill:none;stroke-width:1.9;stroke-linecap:round;stroke-linejoin:round}
+.micb.on{background:var(--accent);color:var(--accent-ink);animation:pulse 1.3s infinite}
+@keyframes pulse{0%{box-shadow:0 0 0 0 color-mix(in srgb,var(--accent) 50%,transparent)}100%{box-shadow:0 0 0 14px transparent}}
+@media (min-width:560px){body{padding-top:12px}}
+@media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+</style>
+</head>
+<body>
+<div id="app" class="app"></div>
+<div id="page"></div>
+<nav id="nav" class="nav" aria-label="Разделы"></nav>
+<button id="fab" class="fab" data-a="expNew" aria-label="Добавить расход"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg></button>
+<script>
+/* ===== ЛОГИКА: деньги хранятся в целых копейках, даты — строки YYYY-MM-DD ===== */
+const L = {};
+(function () {
+  const pad = (n) => String(n).padStart(2, '0');
+  let _today = null;
+  L.setToday = (d) => { _today = d; };
+  L.today = () => {
+    if (_today) return _today;
+    const d = new Date();
+    return d.getFullYear() + '-' + pad(d.getMonth() + 1) + '-' + pad(d.getDate());
+  };
+  L.uid = () => 'i' + Math.random().toString(36).slice(2, 9) + Date.now().toString(36).slice(-4);
+
+  /* ---------- даты ---------- */
+  const daysIn = (m) => { const [y, mo] = m.split('-').map(Number); return new Date(Date.UTC(y, mo, 0)).getUTCDate(); };
+  const monthOf = (d) => d.slice(0, 7);
+  const monthStart = (m) => m + '-01';
+  const monthEnd = (m) => m + '-' + pad(daysIn(m));
+  const addMonths = (m, n) => { const [y, mo] = m.split('-').map(Number); const t = y * 12 + (mo - 1) + n; return Math.floor(t / 12) + '-' + pad((t % 12) + 1); };
+  const dayOfMonth = (m, day) => m + '-' + pad(Math.min(Math.max(1, day | 0), daysIn(m)));
+  const addDays = (d, n) => { const [y, m, dd] = d.split('-').map(Number); const t = new Date(Date.UTC(y, m - 1, dd + n)); return t.getUTCFullYear() + '-' + pad(t.getUTCMonth() + 1) + '-' + pad(t.getUTCDate()); };
+  const addMonthsDate = (anchor, k) => { const nm = addMonths(monthOf(anchor), k); return nm + '-' + pad(Math.min(+anchor.slice(8), daysIn(nm))); };
+  Object.assign(L, { daysIn, monthOf, monthStart, monthEnd, addMonths, dayOfMonth, addDays });
+  L.daysBetween = (a, b) => Math.round((Date.UTC(+b.slice(0, 4), +b.slice(5, 7) - 1, +b.slice(8)) - Date.UTC(+a.slice(0, 4), +a.slice(5, 7) - 1, +a.slice(8))) / 86400000);
+  L.validDate = (s) => /^\d{4}-\d{2}-\d{2}$/.test(s || '') && L.daysIn(s.slice(0, 7)) >= +s.slice(8) && +s.slice(8) >= 1 && +s.slice(5, 7) >= 1 && +s.slice(5, 7) <= 12;
+
+  /* ---------- деньги ---------- */
+  L.parseMoney = (s, allowNeg) => {
+    if (typeof s === 'number') return Number.isFinite(s) ? Math.round(s * 100) : null;
+    let t = String(s == null ? '' : s).replace(/[\s ₽$€₸₴]/g, '').replace(',', '.');
+    let neg = false;
+    if (allowNeg && t[0] === '-') { neg = true; t = t.slice(1); }
+    if (!/^(\d+(\.\d*)?|\.\d+)$/.test(t)) return null;
+    const [a, b = ''] = t.split('.');
+    const v = (parseInt(a || '0', 10)) * 100 + parseInt((b + '00').slice(0, 2), 10);
+    return neg ? -v : v;
+  };
+  L.pctOf = (base, pct) => Math.floor((base * Math.round((pct || 0) * 100)) / 10000);
+  const sum = (arr, f) => arr.reduce((s, x) => s + f(x), 0);
+
+  /* ---------- стартовые данные ---------- */
+  L.PRIO = { oblig: 1, daily: 2, goals: 3, personal: 4 };
+  L.defaultGroups = () => [
+    { id: 'g_oblig', name: 'Обязательства', kind: 'oblig' },
+    { id: 'g_daily', name: 'Повседневная жизнь', kind: 'daily' },
+    { id: 'g_personal', name: 'Личные расходы', kind: 'personal' },
+    { id: 'g_goals', name: 'Накопления и цели', kind: 'goals' },
+  ];
+  L.STARTER = {
+    oblig: ['Аренда и коммунальные услуги', 'Кредиты и рассрочки', 'Подписки', 'Телефон и интернет', 'Страховки и регулярные платежи'],
+    daily: ['Продукты', 'Дом и быт', 'Транспорт', 'Здоровье и аптека', 'Кафе и доставка'],
+    personal: ['Одежда и покупки', 'Красота и уход', 'Хобби', 'Развлечения и отдых', 'Подарки'],
+    goals: ['Накопления', 'Финансовая подушка', 'Отпуск и крупные покупки'],
+  };
+  L.newRule = (kind) => ({ type: 'manual', amount: 0, pct: 0, priority: L.PRIO[kind] || 3, min: 0, max: 0 });
+  L.newCat = (groupId, name, kind) => ({ id: L.uid(), groupId, name, rule: L.newRule(kind) });
+  L.starterCats = () => {
+    const out = [];
+    L.defaultGroups().forEach((g) => L.STARTER[g.kind].forEach((n) => out.push(L.newCat(g.id, n, g.kind))));
+    return out;
+  };
+  L.newState = () => ({
+    v: 1,
+    settings: { name: '', gender: '', currency: 'RUB', cents: 'auto', startBalance: 0, trackFrom: monthOf(L.today()), reservePct: 0, reserveFixed: 0, setupDone: false, demo: false },
+    groups: L.defaultGroups(),
+    cats: L.starterCats(),
+    bills: [],
+    plan: [
+      { id: L.uid(), name: 'Поступление 1', day: 1, amount: 0 },
+      { id: L.uid(), name: 'Поступление 2', day: 15, amount: 0 },
+      { id: L.uid(), name: 'Поступление 3', day: 25, amount: 0 },
+    ],
+    txs: [],
+    allocs: [],
+    quick: { map: {} },
+  });
+
+  L.normalize = (raw) => {
+    if (!raw || typeof raw !== 'object' || !Array.isArray(raw.cats) || !Array.isArray(raw.txs) || !Array.isArray(raw.allocs) || !Array.isArray(raw.bills) || !Array.isArray(raw.plan) || !Array.isArray(raw.groups)) return null;
+    const base = L.newState();
+    const S = JSON.parse(JSON.stringify(raw));
+    S.v = 1;
+    S.quick = S.quick && typeof S.quick.map === 'object' && S.quick.map ? S.quick : { map: {} };
+    S.settings = Object.assign({}, base.settings, S.settings || {});
+    const int = (x) => (Number.isFinite(x) ? Math.round(x) : 0);
+    S.settings.startBalance = int(S.settings.startBalance);
+    S.cats.forEach((c) => { c.rule = Object.assign(L.newRule('personal'), c.rule || {}); c.name = String(c.name || 'Категория'); });
+    S.bills.forEach((b) => { b.span = b.span > 0 ? Math.min(366, b.span | 0) : 0; b.amount = int(b.amount); b.skipped = Array.isArray(b.skipped) ? b.skipped : []; b.period = b.period || 'month'; });
+    S.plan.forEach((p) => { p.amount = int(p.amount); p.dayTo = p.dayTo > p.day ? p.dayTo | 0 : 0; });
+    S.txs.forEach((t) => { t.amount = int(t.amount); });
+    S.allocs.forEach((a) => { a.amount = int(a.amount); });
+    return S;
+  };
+
+  /* ---------- базовые выборки ---------- */
+  L.cat = (S, id) => S.cats.find((c) => c.id === id);
+  L.group = (S, id) => S.groups.find((g) => g.id === id);
+  L.catKind = (S, c) => { const g = c && L.group(S, c.groupId); return g ? g.kind : 'personal'; };
+
+  L.cash = (S, m) => {
+    const e = monthEnd(m);
+    let c = S.settings.startBalance;
+    for (const t of S.txs) if (t.date <= e) c += t.type === 'income' ? t.amount : -t.amount;
+    return c;
+  };
+
+  L.env = (S, id, m) => {
+    const s = monthStart(m), e = monthEnd(m);
+    let carry = 0, alloc = 0, spent = 0;
+    for (const a of S.allocs) if (a.catId === id) { if (a.month < m) carry += a.amount; else if (a.month === m) alloc += a.amount; }
+    for (const t of S.txs) if (t.type === 'expense' && t.catId === id) { if (t.date < s) carry -= t.amount; else if (t.date <= e) spent += t.amount; }
+    return { carry, alloc, spent, avail: carry + alloc, bal: carry + alloc - spent };
+  };
+
+  /* ---------- платежи ---------- */
+  L.occ = (b, from, to) => {
+    const out = [];
+    if (!b.date) return out;
+    const end = b.endDate && b.endDate < to ? b.endDate : to;
+    for (let k = 0; k < 6000; k++) {
+      const d = b.period === 'week' ? addDays(b.date, 7 * k)
+        : b.period === 'year' ? addMonthsDate(b.date, 12 * k)
+          : b.period === 'custom' ? addDays(b.date, Math.max(1, b.interval | 0) * k)
+            : b.period === 'once' ? (k === 0 ? b.date : '9999-12-31')
+              : addMonthsDate(b.date, k);
+      if (d > end) break;
+      if (d >= from) out.push(d);
+    }
+    return out;
+  };
+
+  // Платежи, относящиеся к месяцу m, и неоплаченные за прошлые месяцы (просрочка).
+  L.billItems = (S, m) => {
+    const e = monthEnd(m), s = monthStart(m), ts = monthStart(S.settings.trackFrom);
+    const out = [];
+    for (const b of S.bills) {
+      for (const d of L.occ(b, ts, e)) {
+        const tx = S.txs.find((t) => t.billId === b.id && t.dueDate === d) || null;
+        const skipped = (b.skipped || []).includes(d);
+        out.push({ bill: b, due: d, dueEnd: b.span > 0 ? addDays(d, b.span) : d, tx, skipped, paid: !!tx, paidAsOf: !!tx && tx.date <= e, amount: tx ? tx.amount : b.amount, inMonth: d >= s, overdue: d < s && !tx && !skipped });
+      }
+    }
+    out.sort((a, b) => (a.due < b.due ? -1 : a.due > b.due ? 1 : a.bill.name.localeCompare(b.bill.name)));
+    return out;
+  };
+
+  // Какие неоплаченные платежи уже обеспечены деньгами в своём конверте.
+  L.coverage = (S, m) => {
+    const items = L.billItems(S, m).filter((i) => !i.paidAsOf && !i.skipped);
+    const pool = {};
+    let covered = 0, short = 0;
+    for (const it of items) {
+      const cid = it.bill.catId;
+      if (!(cid in pool)) pool[cid] = L.cat(S, cid) ? Math.max(0, L.env(S, cid, m).bal) : 0;
+      const cov = Math.min(pool[cid], it.amount);
+      pool[cid] -= cov;
+      it.covered = cov; it.short = it.amount - cov;
+      covered += cov; short += it.short;
+    }
+    return { items, covered, short };
+  };
+
+  /* ---------- сводные показатели ---------- */
+  L.totals = (S, m) => {
+    const s = monthStart(m), e = monthEnd(m);
+    const cash = L.cash(S, m);
+    let pos = 0, over = 0;
+    for (const c of S.cats) { const b = L.env(S, c.id, m).bal; if (b > 0) pos += b; else over -= b; }
+    const cov = L.coverage(S, m);
+    const unalloc = cash - pos;
+    return {
+      cash, pos, over, unalloc,
+      reserved: cov.covered, unfunded: cov.short, pending: cov.items,
+      safe: Math.max(0, unalloc - cov.short),
+      incomeM: sum(S.txs.filter((t) => t.type === 'income' && t.date >= s && t.date <= e), (t) => t.amount),
+      spentM: sum(S.txs.filter((t) => t.type === 'expense' && t.date >= s && t.date <= e), (t) => t.amount),
+    };
+  };
+
+  L.slots = (S, m) =>
+    S.plan.map((p) => {
+      const tx = S.txs.find((t) => t.type === 'income' && t.slotId === p.id && t.slotMonth === m) || null;
+      const date = dayOfMonth(m, p.day);
+      return { slot: p, date, dateTo: p.dayTo > p.day ? dayOfMonth(m, p.dayTo) : date, planned: p.amount, tx, received: !!tx };
+    }).sort((a, b) => (a.date < b.date ? -1 : a.date > b.date ? 1 : 0));
+
+  // Плановая сумма категории на месяц (по её правилу и платежам).
+  L.planned = (S, c, m) => {
+    const slots = S.plan;
+    const planInc = sum(slots, (p) => p.amount);
+    const billsSum = sum(L.billItems(S, m).filter((i) => i.inMonth && i.bill.catId === c.id && !i.skipped), (i) => i.amount);
+    return Math.max(billsSum, L.ruleAmount(S, c, planInc, m));
+  };
+  L.ruleAmount = (S, c, planInc, m, depth) => {
+    const r = c.rule;
+    if (r.type === 'fixedMonth') return r.amount;
+    if (r.type === 'fixedEach') return r.amount * S.plan.length;
+    if (r.type === 'pctIncome') return L.pctOf(planInc, r.pct);
+    if (r.type === 'pctRemainder' && !depth) {
+      const ob = sum(S.cats.filter((x) => L.catKind(S, x) === 'oblig'), (x) => Math.max(sum(L.billItems(S, m).filter((i) => i.inMonth && i.bill.catId === x.id && !i.skipped), (i) => i.amount), L.ruleAmount(S, x, planInc, m, 1)));
+      return L.pctOf(Math.max(0, planInc - ob), r.pct);
+    }
+    return 0;
+  };
+
+  /* ---------- автораспределение ---------- */
+  // Возвращает предложение: сколько добавить в каждую категорию. Состояние не меняет.
+  L.planAllocation = (S, m, opts) => {
+    opts = opts || {};
+    const s = monthStart(m), e = monthEnd(m);
+    const A = opts.fresh ? S.allocs.filter((a) => !(a.kind === 'income' && a.month === m)) : S.allocs;
+    const S2 = Object.assign({}, S, { allocs: A });
+    const T = L.totals(S2, m);
+    const incTxs = S.txs.filter((t) => t.type === 'income' && t.date >= s && t.date <= e);
+    const incomeTotal = sum(incTxs, (t) => t.amount);
+    const nPlan = incTxs.filter((t) => t.kind === 'plan').length;
+    const t0 = L.today();
+    const ref = opts.refDate || (t0 >= s && t0 <= e ? t0 : t0 < s ? s : e);
+    const future = L.slots(S, m).filter((x) => !x.received && x.dateTo > ref);
+    const horizon = future.length ? future[0].dateTo : addDays(e, 1);
+
+    const cats = S.cats, idx = {};
+    cats.forEach((c, i) => { idx[c.id] = i; });
+    const add = {}, bal = {}, mA = {};
+    cats.forEach((c) => {
+      add[c.id] = 0;
+      bal[c.id] = L.env(S2, c.id, m).bal;
+      mA[c.id] = sum(A.filter((a) => a.catId === c.id && a.month === m && a.kind !== 'move'), (a) => a.amount);
+    });
+    let pool = Math.max(0, T.unalloc);
+    const pool0 = pool;
+    const prio = (cid) => (L.cat(S, cid) ? L.cat(S, cid).rule.priority : 1);
+    const cov = L.coverage(S2, m);
+    const urgent = cov.items.filter((i) => i.short > 0 && i.due < horizon);
+    const deferred = cov.items.filter((i) => i.short > 0 && i.due >= horizon);
+    const billNeed = {};
+    urgent.forEach((i) => { billNeed[i.bill.catId] = (billNeed[i.bill.catId] || 0) + i.short; });
+    const events = [], shortfalls = [], conflicts = [];
+
+    const give = (catId, x, ev) => {
+      if (x <= 0 || !(catId in add)) return 0;
+      add[catId] += x; pool -= x; events.push(Object.assign({ catId, amount: x }, ev));
+      return x;
+    };
+    const list = [];
+    urgent.forEach((i) => list.push({ kind: 'bill', it: i, catId: i.bill.catId, pr: prio(i.bill.catId), due: i.due, need: i.short, given: 0 }));
+    cats.filter((c) => c.rule.min > 0).forEach((c) => list.push({ kind: 'min', catId: c.id, pr: c.rule.priority, due: '~', need: 0, given: 0 }));
+    list.sort((a, b) => a.pr - b.pr || (a.kind === b.kind ? 0 : a.kind === 'bill' ? -1 : 1) || (a.due < b.due ? -1 : a.due > b.due ? 1 : 0) || (idx[a.catId] ?? 0) - (idx[b.catId] ?? 0));
+
+    let locked = false;
+    for (let i = 0; i < list.length && !locked;) {
+      const it = list[i];
+      if (it.kind === 'bill') {
+        const grp = [];
+        let j = i;
+        while (j < list.length && list[j].kind === 'bill' && list[j].pr === it.pr && list[j].due === it.due) { grp.push(list[j]); j++; }
+        const total = sum(grp, (g) => g.need);
+        const ev = (g) => ({ kind: 'bill', label: g.it.bill.name, due: g.it.due });
+        if (grp.length > 1 && total > pool) {
+          if (opts.conflictMode === 'proportional') {
+            const p0 = pool;
+            grp.forEach((g) => { g.given = give(g.catId, Math.floor((p0 * g.need) / total), ev(g)); });
+          } else if (opts.conflictMode === 'order') {
+            grp.slice().sort((a, b) => (idx[a.catId] ?? 0) - (idx[b.catId] ?? 0)).forEach((g) => { g.given = give(g.catId, Math.min(g.need, pool), ev(g)); });
+          } else {
+            conflicts.push({ priority: it.pr, due: it.due, total, pool, items: grp.map((g) => ({ catId: g.catId, label: g.it.bill.name, need: g.need })) });
+            locked = true;
+          }
+        } else grp.forEach((g) => { g.given = give(g.catId, Math.min(g.need, pool), ev(g)); });
+        grp.forEach((g) => { if (!locked && g.need > g.given) shortfalls.push({ catId: g.catId, label: g.it.bill.name, short: g.need - g.given, kind: 'bill', due: g.due }); });
+        i = j;
+      } else {
+        const c = L.cat(S, it.catId);
+        let need = Math.max(0, c.rule.min - (bal[c.id] + add[c.id]));
+        if (c.rule.max > 0) need = Math.min(need, Math.max(0, c.rule.max - (bal[c.id] + add[c.id])));
+        const g = give(c.id, Math.min(need, pool), { kind: 'min', label: 'Минимум' });
+        if (need > g) shortfalls.push({ catId: c.id, label: c.name, short: need - g, kind: 'min' });
+        i++;
+      }
+    }
+
+    // Свободный резерв (оставляем нераспределённым)
+    const keep = L.pctOf(incomeTotal, S.settings.reservePct) + (incomeTotal > 0 ? S.settings.reserveFixed || 0 : 0);
+    if (!locked) {
+      const wants = cats.filter((c) => c.rule.type !== 'manual').sort((a, b) => a.rule.priority - b.rule.priority || idx[a.id] - idx[b.id]);
+      for (const c of wants) {
+        const r = c.rule, measured = mA[c.id] + add[c.id];
+        let target = 0, label = '';
+        if (r.type === 'fixedMonth') { target = r.amount; label = 'Фикс. в месяц'; }
+        else if (r.type === 'fixedEach') { target = r.amount * nPlan; label = 'Фикс. с поступления'; }
+        else if (r.type === 'pctIncome') { target = L.pctOf(incomeTotal, r.pct); label = r.pct + '% от поступлений'; }
+        else if (r.type === 'pctRemainder') {
+          const ob = sum(cats.filter((x) => L.catKind(S, x) === 'oblig'), (x) => mA[x.id] + add[x.id]);
+          target = L.pctOf(Math.max(0, incomeTotal - ob), r.pct); label = r.pct + '% от остатка';
+        }
+        let need = Math.max(0, target - measured);
+        if (r.max > 0) need = Math.min(need, Math.max(0, r.max - (bal[c.id] + add[c.id])));
+        const x = give(c.id, Math.min(need, Math.max(0, pool - keep)), { kind: 'want', label });
+        if (need > x) shortfalls.push({ catId: c.id, label: c.name, short: need - x, kind: 'want' });
+      }
+    }
+    const total = sum(Object.values(add), (v) => v);
+    let surplus = 0;
+    incTxs.forEach((t) => { if (t.kind === 'plan' && t.planned > 0 && t.amount > t.planned) surplus += t.amount - t.planned; });
+    return { month: m, adds: add, total, pool0, left: T.unalloc - total, keep, events, shortfalls, deferred, conflicts, horizon, billNeed, incomeTotal, surplus, locked, unalloc: T.unalloc };
+  };
+
+  /* ---------- изменения состояния (мутируют S, возвращают {ok,error}) ---------- */
+  L.applyAllocation = (S, m, adds, opts) => {
+    opts = opts || {};
+    const S2 = Object.assign({}, S, { allocs: opts.fresh ? S.allocs.filter((a) => !(a.kind === 'income' && a.month === m)) : S.allocs });
+    const total = sum(Object.values(adds), (v) => Math.max(0, v));
+    const free = L.totals(S2, m).unalloc;
+    if (total > Math.max(0, free)) return { ok: false, error: 'Нельзя распределить больше свободных денег: доступно ' + Math.max(0, free) };
+    if (opts.fresh) S.allocs = S2.allocs;
+    const date = opts.date || L.today();
+    for (const cid of Object.keys(adds)) if (adds[cid] > 0 && L.cat(S, cid)) S.allocs.push({ id: L.uid(), month: m, catId: cid, amount: adds[cid], date, kind: 'income', incomeId: opts.incomeId || null });
+    return { ok: true, total };
+  };
+  L.topUp = (S, m, catId, amount, date) => {
+    if (!(amount > 0)) return { ok: false, error: 'Введите сумму больше нуля' };
+    const free = L.totals(S, m).unalloc;
+    if (amount > free) return { ok: false, error: 'Свободных денег меньше: доступно ' + Math.max(0, free) };
+    S.allocs.push({ id: L.uid(), month: m, catId, amount, date: date || L.today(), kind: 'manual' });
+    return { ok: true };
+  };
+  L.release = (S, m, catId, amount, date) => {
+    const b = L.env(S, catId, m).bal;
+    if (!(amount > 0)) return { ok: false, error: 'Введите сумму больше нуля' };
+    if (amount > b) return { ok: false, error: 'В конверте меньше: доступно ' + Math.max(0, b) };
+    S.allocs.push({ id: L.uid(), month: m, catId, amount: -amount, date: date || L.today(), kind: 'manual' });
+    return { ok: true };
+  };
+  L.move = (S, m, from, to, amount, date) => {
+    if (!(amount > 0)) return { ok: false, error: 'Введите сумму больше нуля' };
+    if (from === to) return { ok: false, error: 'Выберите другую категорию' };
+    const b = L.env(S, from, m).bal;
+    if (amount > b) return { ok: false, error: 'В категории только ' + Math.max(0, b) };
+    const moveId = L.uid(), d = date || L.today();
+    S.allocs.push({ id: L.uid(), month: m, catId: from, amount: -amount, date: d, kind: 'move', moveId });
+    S.allocs.push({ id: L.uid(), month: m, catId: to, amount, date: d, kind: 'move', moveId });
+    return { ok: true };
+  };
+  // Сколько денег категории заняты под неоплаченные платежи
+  L.committed = (S, catId, m) => {
+    const need = sum(L.coverage(S, m).items.filter((i) => i.bill.catId === catId), (i) => i.amount);
+    return Math.min(Math.max(0, L.env(S, catId, m).bal), need);
+  };
+  L.pendingSum = (S, catId, m) => sum(L.coverage(S, m).items.filter((i) => i.bill.catId === catId), (i) => i.amount);
+
+  L.addIncome = (S, o) => {
+    const slot = o.slotId ? S.plan.find((p) => p.id === o.slotId) : null;
+    const tx = { id: L.uid(), type: 'income', kind: slot ? 'plan' : 'extra', date: o.date, amount: o.amount, source: o.source || (slot ? slot.name : ''), slotId: slot ? slot.id : null, slotMonth: slot ? o.slotMonth : null, planned: slot ? slot.amount : 0 };
+    S.txs.push(tx);
+    return tx;
+  };
+  L.addExpense = (S, o) => {
+    const tx = { id: L.uid(), type: 'expense', date: o.date, amount: o.amount, catId: o.catId, title: o.title || '', method: o.method || '' };
+    S.txs.push(tx);
+    return tx;
+  };
+  L.payBill = (S, bill, due, amount, date) => {
+    if (S.txs.some((t) => t.billId === bill.id && t.dueDate === due)) return null;
+    const tx = { id: L.uid(), type: 'expense', date, amount, catId: bill.catId, title: bill.name, method: '', billId: bill.id, dueDate: due };
+    S.txs.push(tx);
+    return tx;
+  };
+  L.deleteTx = (S, id) => {
+    S.txs = S.txs.filter((t) => t.id !== id);
+    S.allocs = S.allocs.filter((a) => a.incomeId !== id);
+  };
+  L.deleteAllocGroup = (S, ids) => { S.allocs = S.allocs.filter((a) => !ids.includes(a.id)); };
+
+  // Правила: проверка на плановый месяц
+  L.ruleCheck = (S, m) => {
+    const planInc = sum(S.plan, (p) => p.amount);
+    const rows = S.cats.map((c) => ({ c, planned: L.planned(S, c, m) }));
+    const demand = sum(rows, (r) => r.planned) + L.pctOf(planInc, S.settings.reservePct) + (S.settings.reserveFixed || 0);
+    const pctSum = sum(S.cats.filter((c) => c.rule.type === 'pctIncome'), (c) => c.rule.pct);
+    return { planInc, demand, diff: planInc - demand, pctSum };
+  };
+
+  /* ---------- группировка записей распределения для истории ---------- */
+  L.allocGroups = (S) => {
+    const map = new Map();
+    for (const a of S.allocs) {
+      const key = a.kind === 'move' ? 'm' + a.moveId : a.kind === 'income' ? 'i' + a.date + (a.incomeId || '') : 'a' + a.id;
+      if (!map.has(key)) map.set(key, { key, kind: a.kind, date: a.date, month: a.month, incomeId: a.incomeId || null, items: [] });
+      map.get(key).items.push(a);
+    }
+    return [...map.values()];
+  };
+
+
+  /* ---------- быстрая запись: разбор фразы «вода 85» ---------- */
+  const NW = { ноль: 0, один: 1, одна: 1, одну: 1, два: 2, две: 2, три: 3, четыре: 4, пять: 5, шесть: 6, семь: 7, восемь: 8, девять: 9, десять: 10, одиннадцать: 11, двенадцать: 12, тринадцать: 13, четырнадцать: 14, пятнадцать: 15, шестнадцать: 16, семнадцать: 17, восемнадцать: 18, девятнадцать: 19, двадцать: 20, тридцать: 30, сорок: 40, пятьдесят: 50, шестьдесят: 60, семьдесят: 70, восемьдесят: 80, девяносто: 90, сто: 100, двести: 200, триста: 300, четыреста: 400, пятьсот: 500, шестьсот: 600, семьсот: 700, восемьсот: 800, девятьсот: 900 };
+  const THOU = /^тысяч/;
+  const FILLER = new Set(['купила', 'купил', 'потратила', 'потратил', 'заплатила', 'заплатил', 'оплатила', 'оплатил', 'взяла', 'взял', 'за', 'на', 'я', 'только', 'что', 'сегодня', 'вчера', 'рублей', 'рубля', 'рубль', 'руб', 'р', 'копеек', 'копейки', 'копейка', 'коп', '₽', 'пожалуйста', 'расход', 'трата', 'добавь', 'добавить', 'запиши', 'записать']);
+  L.parseQuick = (text) => {
+    let t = String(text || '').toLowerCase().replace(/ё/g, 'е').replace(/[«»"!?;:()]/g, ' ').replace(/\s+/g, ' ').trim();
+    let dateOff = 0;
+    if (/(^|\s)вчера(\s|$)/.test(t)) dateOff = -1;
+    t = t.replace(/полторы тысячи/g, '1500');
+    const toks = t.split(' ').filter(Boolean).map((w) => ({ w, num: null, kind: '' }));
+    // слова-числа → числа
+    for (let i = 0; i < toks.length;) {
+      if (!(toks[i].w in NW) && !THOU.test(toks[i].w)) { i++; continue; }
+      let j = i, cur = 0, total = 0, any = false;
+      while (j < toks.length && ((toks[j].w in NW) || THOU.test(toks[j].w))) {
+        if (THOU.test(toks[j].w)) { total += (cur || 1) * 1000; cur = 0; } else cur += NW[toks[j].w];
+        any = true; j++;
+      }
+      if (any && !(THOU.test(toks[i].w) && j === i + 1 && false)) {
+        toks[i].num = (total + cur) * 100; toks[i].kind = 'word'; toks[i].end = j;
+      }
+      i = j;
+    }
+    const cands = [];
+    for (let i = 0; i < toks.length; i++) {
+      const w = toks[i].w;
+      if (toks[i].num != null) { cands.push({ i, end: toks[i].end, val: toks[i].num, kind: 'word' }); i = toks[i].end - 1; continue; }
+      const m = /^\d+(?:[.,]\d{1,2})?$/.exec(w);
+      if (m) {
+        let k = i, txt = w;
+        while (k + 1 < toks.length && /^\d{3}(?:[.,]\d{1,2})?$/.test(toks[k + 1].w) && /^\d{1,3}$/.test(toks[i].w) && k === i) { txt += toks[k + 1].w; k++; }
+        const v = L.parseMoney(txt);
+        if (v != null) cands.push({ i, end: k + 1, val: v, kind: 'digit' });
+        i = k;
+      }
+    }
+    const isCur = (w) => w && /^(руб|р$|₽|рубл)/.test(w);
+    let pick = null;
+    for (const c of cands) { if (isCur(toks[c.end] && toks[c.end].w) || (c.i > 0 && isCur(toks[c.i - 1].w))) { pick = c; break; } }
+    if (!pick) { const d = cands.filter((c) => c.kind === 'digit'); pick = d.length ? d[d.length - 1] : cands.slice().sort((a, b) => b.val - a.val)[0] || null; }
+    let amount = pick ? pick.val : null, used = new Set();
+    if (pick) {
+      for (let k = pick.i; k < pick.end; k++) used.add(k);
+      // «85 рублей 50 копеек»
+      let k = pick.end;
+      if (toks[k] && /^(руб|р$|рубл)/.test(toks[k].w)) { used.add(k); k++; }
+      const c2 = cands.find((c) => c.i === k);
+      if (c2 && toks[c2.end] && /^коп|^к$/.test(toks[c2.end].w) && c2.val % 100 === 0 && c2.val < 10000) { amount += c2.val / 100; for (let q = c2.i; q <= c2.end; q++) used.add(q); }
+    }
+    const words = toks.filter((x, i) => !used.has(i) && !FILLER.has(x.w) && !/^\d+$/.test(x.w)).map((x) => x.w);
+    const title = words.join(' ');
+    return { amount: amount && amount > 0 ? amount : null, title: title ? title[0].toUpperCase() + title.slice(1) : '', words, dateOff };
+  };
+  L.QUICK_DICT = {
+    'Продукты': ['вод', 'молок', 'хлеб', 'продукт', 'овощ', 'фрукт', 'мяс', 'сыр', 'яйц', 'магазин', 'пятероч', 'магнит', 'перекрест', 'вкусвилл', 'ашан', 'картош', 'банан', 'яблок', 'куриц', 'колбас', 'творог', 'йогурт', 'конфет', 'шоколад', 'чай$', 'сок$', 'печень', 'масл', 'круп', 'макарон'],
+    'Кафе и доставка': ['кофе', 'капучин', 'латте', 'обед', 'ужин', 'завтрак', 'ресторан', 'кафе', 'пицц', 'бургер', 'суши', 'ролл', 'достав', 'макдон', 'столов', 'перекус', 'десерт'],
+    'Транспорт': ['такси', 'метро', 'автобус', 'трамва', 'маршрут', 'бензин', 'заправ', 'парков', 'проезд', 'электрич', 'каршеринг', 'самокат'],
+    'Здоровье и аптека': ['аптек', 'лекарств', 'таблет', 'врач', 'анализ', 'стоматолог', 'витамин', 'больниц', 'клиник'],
+    'Дом и быт': ['порош', 'лампоч', 'хозяйств', 'уборк', 'посуд', 'губк', 'мыло', 'батарейк', 'ремонт', 'пакет'],
+    'Одежда и покупки': ['футболк', 'куртк', 'обув', 'кроссовк', 'джинс', 'платье', 'одежд', 'сумк', 'носк', 'белье', 'свитер'],
+    'Красота и уход': ['маникюр', 'педикюр', 'парикмах', 'стрижк', 'косметик', 'крем', 'шампун', 'салон', 'массаж', 'духи', 'помад'],
+    'Развлечения и отдых': ['кино', 'театр', 'концерт', 'музей', 'билет', 'боулинг', 'квест'],
+    'Подарки': ['подар', 'цвет', 'букет', 'открытк'],
+    'Хобби': ['хобби', 'краск', 'книг', 'рукодел', 'абонемент'],
+    'Подписки': ['подписк', 'netflix', 'spotify', 'кинопоиск', 'icloud'],
+    'Телефон и интернет': ['интернет', 'связь$', 'мобильн', 'тариф'],
+    'Аренда и коммунальные услуги': ['аренд', 'коммунал', 'жкх', 'квартплат'],
+  };
+  L.guessCat = (S, words) => {
+    const votes = {};
+    words.forEach((w) => { const id = S.quick && S.quick.map[w.slice(0, 5)]; if (id && L.cat(S, id)) votes[id] = (votes[id] || 0) + 2; });
+    const best = Object.keys(votes).sort((a, b) => votes[b] - votes[a])[0];
+    if (best) return best;
+    for (const name of Object.keys(L.QUICK_DICT)) {
+      const c = S.cats.find((x) => x.name === name); if (!c) continue;
+      if (words.some((w) => L.QUICK_DICT[name].some((k) => (k.endsWith('$') ? w === k.slice(0, -1) : w.startsWith(k))))) return c.id;
+    }
+    return '';
+  };
+  L.learnCat = (S, words, catId) => { if (!S.quick) S.quick = { map: {} }; words.forEach((w) => { if (w.length >= 3 && /[а-яa-z]/.test(w)) S.quick.map[w.slice(0, 5)] = catId; }); };
+
+  /* ---------- демо-данные ---------- */
+  L.demoState = () => {
+    const S = L.newState();
+    S.settings.setupDone = true; S.settings.demo = true;
+    const m = monthOf(L.today());
+    const cid = (n) => S.cats.find((c) => c.name === n).id;
+    S.plan = [
+      { id: L.uid(), name: 'Пример: аванс', day: 1, amount: 6000000 },
+      { id: L.uid(), name: 'Пример: зарплата', day: 15, amount: 4500000 },
+      { id: L.uid(), name: 'Пример: подработка', day: 25, amount: 3000000 },
+    ];
+    const bill = (name, cat, amount, day, period) => S.bills.push({ id: L.uid(), name, catId: cid(cat), amount, date: dayOfMonth(m, day), period: period || 'month', interval: 0, endDate: '', note: '', skipped: [] });
+    bill('Пример: аренда', 'Аренда и коммунальные услуги', 2800000, 5);
+    bill('Пример: рассрочка', 'Кредиты и рассрочки', 700000, 10);
+    bill('Пример: музыка и кино', 'Подписки', 69900, 20);
+    bill('Пример: интернет', 'Телефон и интернет', 90000, 12);
+    const setRule = (n, type, v) => { const c = S.cats.find((x) => x.name === n); c.rule.type = type; if (type === 'pctIncome' || type === 'pctRemainder') c.rule.pct = v; else c.rule.amount = v; };
+    setRule('Продукты', 'fixedMonth', 1800000); setRule('Транспорт', 'fixedMonth', 300000); setRule('Здоровье и аптека', 'fixedMonth', 200000);
+    setRule('Кафе и доставка', 'pctRemainder', 10); setRule('Красота и уход', 'pctRemainder', 8); setRule('Развлечения и отдых', 'pctRemainder', 8);
+    setRule('Накопления', 'pctIncome', 10); setRule('Финансовая подушка', 'pctIncome', 5);
+    const first = L.addIncome(S, { slotId: S.plan[0].id, slotMonth: m, date: dayOfMonth(m, 1) <= L.today() ? dayOfMonth(m, 1) : L.today(), amount: 6000000 });
+    const res = L.planAllocation(S, m, { refDate: first.date });
+    L.applyAllocation(S, m, res.adds, { incomeId: first.id, date: first.date });
+    const dd = (d) => (dayOfMonth(m, d) <= L.today() ? dayOfMonth(m, d) : L.today());
+    L.addExpense(S, { date: dd(2), amount: 184050, catId: cid('Продукты'), title: 'Пример: супермаркет' });
+    L.addExpense(S, { date: dd(3), amount: 45000, catId: cid('Транспорт'), title: 'Пример: проезд' });
+    L.addExpense(S, { date: dd(4), amount: 62000, catId: cid('Кафе и доставка'), title: 'Пример: кофе и ужин' });
+    return S;
+  };
+})();
+
+/* ===== ИНТЕРФЕЙС: ядро, главная, бюджет ===== */
+const KEY = 'budget.planner.v1', STASH = 'budget.planner.v1.stash';
+let persistOK = true;
+let S = null;
+const ui = { tab: 'home', month: L.monthOf(L.today()), fCat: '', fType: 'all', fAll: false, screen: null, wiz: 0, pv: null };
+const $ = (s, r) => (r || document).querySelector(s);
+const esc = (s) => String(s == null ? '' : s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+const MONTHS = ['Январь', 'Февраль', 'Март', 'Апрель', 'Май', 'Июнь', 'Июль', 'Август', 'Сентябрь', 'Октябрь', 'Ноябрь', 'Декабрь'];
+const MS = ['янв', 'фев', 'мар', 'апр', 'мая', 'июн', 'июл', 'авг', 'сен', 'окт', 'ноя', 'дек'];
+const monthLabel = (m) => MONTHS[+m.slice(5) - 1] + ' ' + m.slice(0, 4);
+const fmtDate = (d) => (+d.slice(8)) + ' ' + MS[+d.slice(5, 7) - 1] + (d.slice(0, 4) !== L.today().slice(0, 4) ? ' ' + d.slice(0, 4) : '');
+const plural = (n, f) => { n = Math.abs(n) % 100; const k = n % 10; return n > 10 && n < 20 ? f[2] : k > 1 && k < 5 ? f[1] : k === 1 ? f[0] : f[2]; };
+const ICON = {
+  home: '<path d="M3 11l9-8 9 8"/><path d="M5.5 10v10h13V10"/>',
+  wallet: '<rect x="3" y="6" width="18" height="13" rx="3"/><path d="M3 10.5h18"/><path d="M16 14.7h1.5"/>',
+  cal: '<rect x="3" y="5" width="18" height="16" rx="3"/><path d="M8 3v4M16 3v4M3 10h18"/><path d="M9 15.2l2 2 4-4"/>',
+  list: '<path d="M9 6h12M9 12h12M9 18h12"/><circle cx="4.5" cy="6" r="1"/><circle cx="4.5" cy="12" r="1"/><circle cx="4.5" cy="18" r="1"/>',
+  mic: '<rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5 11a7 7 0 0 0 14 0M12 18v3"/>',
+  plus: '<path d="M12 5v14M5 12h14"/>', gear: '<path d="M4 7h9M17 7h3M4 17h3M11 17h9"/><circle cx="15" cy="7" r="2"/><circle cx="9" cy="17" r="2"/>',
+  l: '<path d="M15 6l-6 6 6 6"/>', r: '<path d="M9 6l6 6-6 6"/>', ok: '<path d="M5 12.5l4.5 4.5L19 7.5"/>', up: '<path d="M6 14l6-6 6 6"/>', dn: '<path d="M6 10l6 6 6-6"/>',
+  x: '<path d="M6 6l12 12M18 6L6 18"/>', tr: '<path d="M4 7h16M10 11v6M14 11v6M6 7l1 12h10l1-12M9 7V4h6v3"/>', ed: '<path d="M4 20h4L19 9l-4-4L4 16z"/>',
+};
+const ic = (n) => '<svg viewBox="0 0 24 24" aria-hidden="true">' + ICON[n] + '</svg>';
+
+/* ---------- хранение ---------- */
+function load() {
+  try { const raw = localStorage.getItem(KEY); if (raw) { const n = L.normalize(JSON.parse(raw)); if (n) return n; } } catch (e) { persistOK = false; }
+  return L.newState();
+}
+function save() { try { localStorage.setItem(KEY, JSON.stringify(S)); } catch (e) { persistOK = false; } }
+function commit(keepScroll) { save(); render(keepScroll !== false); }
+
+/* ---------- форматирование денег ---------- */
+const CURS = { RUB: 'Рубль ₽', USD: 'Доллар $', EUR: 'Евро €', KZT: 'Тенге ₸', UAH: 'Гривна ₴', BYN: 'Бел. рубль', GEL: 'Лари ₾', AMD: 'Драм ֏', TRY: 'Лира ₺' };
+function fmt(k, o) {
+  const frac = S.settings.cents === 'always' ? 2 : (k % 100 === 0 ? 0 : 2);
+  let s;
+  try { s = new Intl.NumberFormat('ru-RU', { style: 'currency', currency: S.settings.currency, minimumFractionDigits: frac, maximumFractionDigits: frac }).format(k / 100); }
+  catch (e) { s = (k / 100).toFixed(frac) + ' ' + S.settings.currency; }
+  if (o && o.sign && k > 0) s = '+' + s;
+  return s;
+}
+const kopToInput = (k) => (k === 0 ? '' : k % 100 === 0 ? String(k / 100) : (k / 100).toFixed(2).replace('.', ','));
+
+/* ---------- мелкие хелперы интерфейса ---------- */
+let toastT = null;
+function toast(msg) {
+  $('#toast') && $('#toast').remove();
+  const t = document.createElement('div'); t.className = 'toast'; t.id = 'toast'; t.setAttribute('role', 'status'); t.textContent = msg;
+  document.body.appendChild(t); clearTimeout(toastT); toastT = setTimeout(() => t.remove(), 2600);
+}
+function openSheet(html) {
+  closeSheet();
+  const ov = document.createElement('div'); ov.className = 'ov'; ov.id = 'ov';
+  ov.innerHTML = '<div class="sheet" role="dialog" aria-modal="true"><div class="grab"></div>' + html + '</div>';
+  document.body.appendChild(ov);
+  const f = ov.querySelector('[data-focus]'); if (f) setTimeout(() => f.focus(), 60);
+}
+function setSheet(html) { const s = document.querySelector('#ov .sheet'); if (s) s.innerHTML = '<div class="grab"></div>' + html; else openSheet(html); }
+function closeSheet() { if (typeof stopListen === 'function') stopListen(); const o = $('#ov'); if (o) o.remove(); }
+let okCb = null;
+function ask(o) {
+  okCb = o.onOk;
+  openSheet('<h2>' + esc(o.title) + '</h2><p class="muted" style="margin-top:6px">' + o.text + '</p><div class="foot"><button class="btn ' + (o.danger ? 'danger' : 'primary') + ' block" data-a="askOk">' + esc(o.ok || 'Да') + '</button><button class="btn block" data-a="close">Отмена</button></div>');
+}
+const catName = (id) => { const c = L.cat(S, id); return c ? c.name : 'Удалённая категория'; };
+function readDate(t) {
+  t = String(t).trim(); if (!t) return '';
+  const m = /^(\d{1,2})\.(\d{1,2})\.(\d{4})$/.exec(t); if (!m) return 'invalid';
+  const iso = m[3] + '-' + m[2].padStart(2, '0') + '-' + m[1].padStart(2, '0');
+  return L.validDate(iso) ? iso : 'invalid';
+}
+const val = (id) => { const e = document.getElementById(id); if (!e) return ''; return e.dataset.date !== undefined ? readDate(e.value) : e.value; };
+const dateField = (id, iso) => '<div class="datew"><input class="in" id="' + id + '" data-date data-i="dateMask" inputmode="numeric" autocomplete="off" placeholder="ДД.ММ.ГГГГ" maxlength="10" value="' + (iso ? iso.slice(8) + '.' + iso.slice(5, 7) + '.' + iso.slice(0, 4) : '') + '"><span class="calb" aria-hidden="true">' + ic('cal') + '<input type="date" class="calp" tabindex="-1" aria-label="Выбрать дату в календаре" data-c="datePick" data-for="' + id + '" value="' + (iso || '') + '"></span></div>';
+const gv = (f, m, n) => (S.settings.gender === 'f' ? f : S.settings.gender === 'm' ? m : n);
+const spanText = (a, b) => (b > a ? (a.slice(0, 7) === b.slice(0, 7) ? (+a.slice(8)) + '–' + (+b.slice(8)) + ' ' + MS[+a.slice(5, 7) - 1] : fmtDate(a) + ' – ' + fmtDate(b)) : fmtDate(a));
+const slotWhen = (x) => (x.dateTo > x.date ? (+x.date.slice(8)) + '–' + (+x.dateTo.slice(8)) + ' ' + MS[+x.date.slice(5, 7) - 1] : fmtDate(x.date));
+function greeting() {
+  const h = new Date().getHours();
+  const g = h < 5 ? 'Доброй ночи' : h < 12 ? 'Доброе утро' : h < 18 ? 'Добрый день' : 'Добрый вечер';
+  return g + (S.settings.name ? ', ' + esc(S.settings.name) : '');
+}
+function shiftMonth(n) { ui.month = L.addMonths(ui.month, n); render(false); }
+function minMonth() {
+  let m = S.settings.trackFrom;
+  S.txs.forEach((t) => { if (L.monthOf(t.date) < m) m = L.monthOf(t.date); });
+  S.allocs.forEach((a) => { if (a.month < m) m = a.month; });
+  return m;
+}
+function monthBar(extra) {
+  const lo = minMonth() >= ui.month, hi = ui.month >= L.addMonths(L.monthOf(L.today()), 12);
+  return '<div class="top"><div class="mbar"><button class="ib" data-a="mprev" aria-label="Предыдущий месяц"' + (lo ? ' disabled style="opacity:.3"' : '') + '>' + ic('l') + '</button><div class="m">' + monthLabel(ui.month) + '</div><button class="ib" data-a="mnext" aria-label="Следующий месяц"' + (hi ? ' disabled style="opacity:.3"' : '') + '>' + ic('r') + '</button></div>' + (extra || '') + '</div>';
+}
+const defaultDate = () => { const t = L.today(), cm = L.monthOf(t); return ui.month === cm ? t : ui.month < cm ? L.monthEnd(ui.month) : L.monthStart(ui.month); };
+
+/* ---------- рендер ---------- */
+function render(keepScroll) {
+  const y = window.scrollY;
+  const app = $('#app');
+  let h = '';
+  if (S.settings.demo) h += '<div class="demo"><span>Показаны демо-данные</span><button class="btn sm" data-a="demoOff">Вернуть мои данные</button></div>';
+  if (!persistOK) h += '<div class="banner bad" style="margin-bottom:12px">Браузер не разрешает сохранять данные. Пока вкладка открыта, всё работает, но после закрытия данные пропадут. Сделайте резервную копию в настройках.</div>';
+  h += ({ home: viewHome, budget: viewBudget, pay: viewPay, hist: viewHist })[ui.tab]();
+  app.innerHTML = h;
+  const tabBtn = (x) => '<button data-a="tab" data-t="' + x[0] + '" class="' + (ui.tab === x[0] ? 'on' : '') + '"' + (ui.tab === x[0] ? ' aria-current="page"' : '') + '>' + ic(x[1]) + x[2] + '</button>';
+  $('#nav').innerHTML = '<div>' + tabBtn(['home', 'home', 'Главная']) + tabBtn(['budget', 'wallet', 'Бюджет']) + '<button class="mic" data-a="qOpen" aria-label="Быстрая запись расхода голосом">' + ic('mic') + '</button>' + tabBtn(['pay', 'cal', 'Платежи']) + tabBtn(['hist', 'list', 'История']) + '</div>';
+  const fab = $('#fab');
+  fab.setAttribute('aria-label', ui.tab === 'pay' ? 'Добавить платёж' : 'Добавить');
+  fab.dataset.a = ui.tab === 'pay' ? 'billNew' : 'fabMenu';
+  if (keepScroll !== false) window.scrollTo(0, y); else window.scrollTo(0, 0);
+  renderScreen();
+}
+
+/* ---------- Главная ---------- */
+function slotRow(x) {
+  const d = x.date, range = x.dateTo > x.date;
+  const right = x.received
+    ? '<div class="amt pos">' + fmt(x.tx.amount) + '</div>'
+    : '<button class="btn soft sm" data-a="recv" data-slot="' + x.slot.id + '">' + gv('Получила', 'Получил', 'Поступило') + '</button>';
+  const status = x.received ? 'Получено ' + fmtDate(x.tx.date) + (x.tx.planned && x.tx.amount !== x.tx.planned ? ' · план ' + fmt(x.tx.planned) : '')
+    : (x.planned > 0 ? 'Ожидается · план ' + fmt(x.planned) : 'Ожидается · сумма не задана');
+  return '<div class="li"><div style="width:' + (range ? 58 : 46) + 'px;text-align:center;flex:none"><div class="num" style="font-size:' + (range ? 17 : 22) + 'px;font-weight:600;line-height:1.1">' + (range ? (+d.slice(8)) + '–' + (+x.dateTo.slice(8)) : (+d.slice(8))) + '</div><div class="xs muted">' + MS[+d.slice(5, 7) - 1] + '</div></div><div class="sp"><div class="t">' + esc(x.slot.name) + '</div><div class="s">' + status + '</div></div>' + right + '</div>';
+}
+function catRow(c, m, detailed) {
+  const e = L.env(S, c.id, m), p = L.planned(S, c, m);
+  const pct = e.avail > 0 ? e.spent / e.avail : (e.spent > 0 ? 9 : 0);
+  const cls = e.bal < 0 ? 'bad' : (e.avail > 0 && pct >= 0.85 ? 'warn' : '');
+  const badge = e.bal < 0 ? '<span class="pill bad">Перерасход ' + fmt(-e.bal) + '</span>' : cls === 'warn' ? '<span class="pill warn">Почти исчерпано</span>' : '';
+  let body;
+  if (detailed) {
+    body = '<div class="cols4"><div><div class="l">План на месяц</div><div class="v">' + (p > 0 ? fmt(p) : '—') + '</div></div><div><div class="l">Выделено' + (e.carry ? ' (с переносом)' : '') + '</div><div class="v">' + fmt(e.avail) + '</div></div><div><div class="l">Потрачено</div><div class="v">' + fmt(e.spent) + '</div></div><div><div class="l">Использовано</div><div class="v">' + (e.avail > 0 ? Math.round(pct * 100) + '%' : e.spent > 0 ? '—' : '0%') + '</div></div></div>';
+  } else {
+    body = '<div class="mini"><span>План <b>' + (p > 0 ? fmt(p) : '—') + '</b></span><span>Выделено <b>' + fmt(e.avail) + '</b></span><span>Потрачено <b>' + fmt(e.spent) + '</b></span></div>';
+  }
+  return '<button class="cat" data-a="cat" data-id="' + c.id + '"><div class="row"><div class="nm sp">' + esc(c.name) + '</div>' + badge + '<div class="amt ' + (e.bal < 0 ? 'neg' : '') + '">' + fmt(e.bal) + '</div></div>' + body + '<div class="prog ' + cls + '"><i style="width:' + Math.min(100, Math.round(pct * 100)) + '%"></i></div></button>';
+}
+function billRow(it, opts) {
+  opts = opts || {};
+  const cat = catName(it.bill.catId);
+  let badge = '';
+  if (it.paid) badge = '<span class="pill ok">оплачено ' + fmtDate(it.tx.date) + '</span>';
+  else if (it.skipped) badge = '<span class="pill">пропущен</span>';
+  else {
+    if (it.short > 0) badge = '<span class="pill warn">не отложено ' + fmt(it.short) + '</span>';
+    else if (it.covered != null) badge = '<span class="pill ok">деньги отложены</span>';
+    if (it.dueEnd < L.today()) badge = '<span class="pill bad">просрочен</span> ' + badge;
+  }
+  const act = it.paid ? 'unpay' : it.skipped ? 'unskip' : 'pay';
+  return '<div class="li" style="gap:10px">' + (opts.check ? '<button class="chk ' + (it.paid ? 'on' : '') + '" data-a="' + act + '" data-b="' + it.bill.id + '" data-d="' + it.due + '" aria-label="' + (it.paid ? 'Отменить оплату' : it.skipped ? 'Вернуть платёж' : 'Отметить оплаченным') + '">' + ic('ok') + '</button>' : '') +
+    '<button class="sp" style="text-align:left;min-width:0" data-a="' + (opts.check ? 'billEdit' : 'payOpen') + '" data-b="' + it.bill.id + '" data-d="' + it.due + '"><div class="t">' + esc(it.bill.name) + '</div><div class="s">' + spanText(it.due, it.dueEnd) + ' · ' + esc(cat) + '</div><div style="margin-top:4px">' + badge + '</div></button><div class="amt">' + fmt(it.amount) + '</div></div>';
+}
+function viewHome() {
+  const m = ui.month, T = L.totals(S, m), isNow = m === L.monthOf(L.today());
+  const share = T.cash > 0 ? Math.min(100, Math.round(T.pos / T.cash * 100)) : 0;
+  const pendSum = T.pending.reduce((s, i) => s + i.amount, 0);
+  let h = monthBar('<button class="ib" data-a="settings" aria-label="Настройки бюджета">' + ic('gear') + '</button>');
+  h += '<div class="sm muted" style="margin:-6px 4px 12px">' + greeting() + '</div><div class="stack">';
+  h += '<section class="hero"><div class="eyebrow">' + (isNow ? 'Сейчас на руках' : 'На конец месяца на руках') + '</div><div class="big">' + fmt(T.cash) + '</div><div class="split"><i style="width:' + share + '%"></i></div><div class="legend"><span>В конвертах ' + fmt(T.pos) + '</span><span>Не распределено ' + fmt(T.unalloc) + '</span></div></section>';
+  h += '<section class="safe"><div class="lab">Можно потратить свободно</div><div class="v">' + fmt(T.safe) + '</div><p>' + (T.unfunded > 0 ? 'Свободные деньги ' + fmt(Math.max(0, T.unalloc)) + ' минус ' + fmt(T.unfunded) + ' на платежи, которые пока не обеспечены.' : 'Деньги, которые не нужны ни в конвертах, ни на неоплаченные платежи.') + '</p></section>';
+  if (T.unalloc < 0) h += '<div class="banner bad"><div>Выделено больше, чем есть на руках: на <b>' + fmt(-T.unalloc) + '</b>. Уменьшите суммы в конвертах или верните деньги в свободные.</div></div>';
+  else if (T.over > 0) h += '<div class="banner"><div>Перерасход по категориям: <b>' + fmt(T.over) + '</b>. Он покрыт из свободных денег. Можно изменить бюджет категории.</div></div>';
+  if (T.unfunded > 0) h += '<div class="banner"><div>Пока не отложено на платежи: <b>' + fmt(T.unfunded) + '</b>. <button class="link" style="min-height:0" data-a="alloc">Распределить деньги</button></div></div>';
+  h += '<div class="quick"><button class="btn primary" data-a="recv">' + gv('Получила деньги', 'Получил деньги', 'Деньги поступили') + '</button><button class="btn" data-a="alloc">Распределить деньги</button><button class="btn" data-a="expNew">Добавить расход</button><button class="btn" data-a="incExtra">Добавить доход</button></div>';
+  h += '<div class="grid2"><div class="stat"><div class="l">Получено за месяц</div><div class="v">' + fmt(T.incomeM) + '</div></div><div class="stat"><div class="l">Потрачено</div><div class="v">' + fmt(T.spentM) + '</div></div><div class="stat"><div class="l">Отложено под платежи</div><div class="v">' + fmt(T.reserved) + '</div><div class="xs muted">к оплате ' + fmt(pendSum) + '</div></div><div class="stat"><div class="l">Можно распределить</div><div class="v ' + (T.unalloc < 0 ? 'neg' : '') + '">' + fmt(T.unalloc) + '</div></div></div>';
+  h += '</div>';
+  const slots = L.slots(S, m);
+  h += '<div class="sect"><h2>Поступления</h2><button class="link" data-a="settings">Настроить</button></div>';
+  h += slots.length ? '<div class="list">' + slots.map(slotRow).join('') + '</div>' : '<div class="card empty"><h3>Поступления не настроены</h3><p>Укажите даты и суммы, когда вы получаете деньги.</p><button class="btn soft" data-a="settings">Настроить</button></div>';
+  const up = T.pending.slice(0, 4);
+  h += '<div class="sect"><h2>Ближайшие платежи</h2><button class="link" data-a="tab" data-t="pay">Все платежи</button></div>';
+  h += up.length ? '<div class="list">' + up.map((i) => billRow(i, {})).join('') + '</div>' : '<div class="card empty"><h3>Платежей к оплате нет</h3><p>' + (S.bills.length ? 'Всё оплачено или платежей в этом месяце нет.' : 'Добавьте кредиты, подписки и другие регулярные платежи.') + '</p>' + (S.bills.length ? '' : '<button class="btn soft" data-a="billNew">Добавить платёж</button>') + '</div>';
+  h += '<div class="sect"><h2>Категории</h2><button class="link" data-a="tab" data-t="budget">Бюджет</button></div>';
+  h += catGroups(m, false);
+  return h;
+}
+function catGroups(m, detailed) {
+  let h = '';
+  S.groups.forEach((g) => {
+    const cs = S.cats.filter((c) => c.groupId === g.id);
+    if (!cs.length && !detailed) return;
+    const tot = cs.reduce((s, c) => s + L.env(S, c.id, m).bal, 0);
+    h += '<div class="gh"><h3>' + esc(g.name) + '</h3><span class="xs muted">осталось <span class="num">' + fmt(tot) + '</span></span></div><div class="list">';
+    h += cs.length ? cs.map((c) => catRow(c, m, detailed)).join('') : '<div class="li muted sm">В этой группе пока нет категорий</div>';
+    if (detailed) h += '<button class="li" style="color:var(--accent-deep);font-weight:500" data-a="catNew" data-g="' + g.id + '">' + ic('plus').replace('<svg', '<svg width="20" height="20" style="stroke:currentColor;fill:none;stroke-width:2"') + 'Добавить категорию</button>';
+    h += '</div>';
+  });
+  return h;
+}
+
+/* ---------- Бюджет ---------- */
+function viewBudget() {
+  const m = ui.month, T = L.totals(S, m);
+  let h = monthBar('<button class="ib" data-a="settings" aria-label="Настройки бюджета">' + ic('gear') + '</button>');
+  h += '<div class="card stack"><div><div class="muted sm">Не распределено</div><div class="num" style="font-size:36px;font-weight:600;letter-spacing:-.03em;' + (T.unalloc < 0 ? 'color:var(--bad)' : '') + '">' + fmt(T.unalloc) + '</div><div class="sm muted">Деньги на руках ' + fmt(T.cash) + ', в конвертах ' + fmt(T.pos) + '</div></div>';
+  h += '<button class="btn primary block" data-a="alloc">Распределить автоматически</button><div class="two"><button class="btn" data-a="rules">Правила</button><button class="btn" data-a="settings">Категории</button></div></div>';
+  if (T.unalloc < 0) h += '<div class="banner bad" style="margin-top:12px"><div>Выделено больше, чем есть: нужно вернуть в свободные <b>' + fmt(-T.unalloc) + '</b>.</div></div>';
+  h += '<p class="xs muted" style="margin:12px 4px 0">Остаток каждой категории переходит в следующий месяц. Перерасход можно закрыть, перенеся деньги из другой категории.</p>';
+  h += catGroups(m, true);
+  return h;
+}
+
+/* ---------- Лист категории ---------- */
+function openCat(id, mode) {
+  const c = L.cat(S, id); if (!c) return;
+  const m = ui.month, e = L.env(S, id, m), T = L.totals(S, m);
+  const pend = L.pendingSum(S, id, m);
+  mode = mode || 'view';
+  const back = '<button class="btn block" data-a="cat" data-id="' + id + '">Назад</button>';
+  if (mode === 'view') {
+    const p = L.planned(S, c, m), pct = e.avail > 0 ? e.spent / e.avail : 0;
+    setSheet('<h2>' + esc(c.name) + '</h2><div class="muted sm">' + esc(L.group(S, c.groupId) ? L.group(S, c.groupId).name : '') + '</div>' +
+      '<div class="num" style="font-size:36px;font-weight:600;margin:10px 0 2px;' + (e.bal < 0 ? 'color:var(--bad)' : '') + '">' + fmt(e.bal) + '</div><div class="sm muted">' + (e.bal < 0 ? 'перерасход, покрыт из свободных денег' : 'осталось в конверте') + '</div>' +
+      '<div class="prog ' + (e.bal < 0 ? 'bad' : pct >= .85 ? 'warn' : '') + '"><i style="width:' + Math.min(100, Math.round(pct * 100)) + '%"></i></div>' +
+      '<div class="cols4"><div><div class="l">Запланировано</div><div class="v">' + (p > 0 ? fmt(p) : '—') + '</div></div><div><div class="l">Перенос с прошлого</div><div class="v">' + fmt(e.carry) + '</div></div><div><div class="l">Выделено в месяце</div><div class="v">' + fmt(e.alloc) + '</div></div><div><div class="l">Потрачено</div><div class="v">' + fmt(e.spent) + '</div></div></div>' +
+      (pend > 0 ? '<div class="banner" style="margin-top:12px"><div>Под неоплаченные платежи нужно <b>' + fmt(pend) + '</b>, отложено <b>' + fmt(L.committed(S, id, m)) + '</b>.</div></div>' : '') +
+      '<div class="foot"><div class="two"><button class="btn primary" data-a="expNew" data-cat="' + id + '">Расход</button><button class="btn soft" data-a="catMode" data-id="' + id + '" data-mode="top">Пополнить</button></div><div class="two"><button class="btn" data-a="catMode" data-id="' + id + '" data-mode="move">Перенести</button><button class="btn" data-a="catMode" data-id="' + id + '" data-mode="rel">Вернуть в свободные</button></div><div class="two"><button class="btn ghost" data-a="ruleEdit" data-id="' + id + '">Правило</button><button class="btn ghost" data-a="catEdit" data-id="' + id + '">Изменить</button></div></div>');
+    return;
+  }
+  const titles = { top: 'Пополнить из свободных', move: 'Перенести в другую категорию', rel: 'Вернуть в свободные' };
+  const info = mode === 'top' ? 'Свободно: <b>' + fmt(Math.max(0, T.unalloc)) + '</b>' : 'В конверте: <b>' + fmt(Math.max(0, e.bal)) + '</b>';
+  let dest = '';
+  if (mode === 'move') dest = '<label class="f" for="f-to">Куда перенести</label><select class="sel" id="f-to">' + S.groups.map((g) => '<optgroup label="' + esc(g.name) + '">' + S.cats.filter((x) => x.groupId === g.id && x.id !== id).map((x) => '<option value="' + x.id + '">' + esc(x.name) + ' (' + fmt(L.env(S, x.id, m).bal) + ')</option>').join('') + '</optgroup>').join('') + '</select>';
+  setSheet('<h2>' + titles[mode] + '</h2><div class="muted sm">' + esc(c.name) + ' · ' + info + '</div><label class="f" for="f-amount">Сумма</label><input class="in" id="f-amount" inputmode="decimal" autocomplete="off" placeholder="0" data-focus data-i="catAmt" data-id="' + id + '" data-mode="' + mode + '">' + dest +
+    '<div class="errt" id="f-err"></div><div id="f-warn"></div><div class="foot"><button class="btn primary block" id="f-save" data-a="catDo" data-id="' + id + '" data-mode="' + mode + '">' + (mode === 'top' ? 'Пополнить' : mode === 'move' ? 'Перенести' : 'Вернуть') + '</button>' + back + '</div>');
+}
+
+/* ===== ИНТЕРФЕЙС: платежи, история, формы расходов/доходов/платежей ===== */
+const backBtn = (menu) => (menu ? '<button class="btn block" data-a="fabMenu">Назад</button>' : '<button class="btn block" data-a="close">Отмена</button>');
+const PERIODS = { month: 'Каждый месяц', week: 'Каждую неделю', year: 'Раз в год', custom: 'Свой интервал', once: 'Один раз' };
+const periodText = (b) => (b.period === 'custom' ? 'Каждые ' + (b.interval | 0) + ' ' + plural(b.interval | 0, ['день', 'дня', 'дней']) : PERIODS[b.period] || '');
+
+function decorate(items, m) {
+  const cov = L.coverage(S, m), map = {};
+  cov.items.forEach((c) => { map[c.bill.id + '|' + c.due] = c; });
+  items.forEach((i) => { const c = map[i.bill.id + '|' + i.due]; if (c) { i.covered = c.covered; i.short = c.short; } });
+  return items;
+}
+function viewPay() {
+  const m = ui.month;
+  const all = decorate(L.billItems(S, m), m);
+  const inM = all.filter((i) => i.inMonth && !i.skipped);
+  const total = inM.reduce((s, i) => s + i.amount, 0);
+  const left = inM.filter((i) => !i.paid).reduce((s, i) => s + i.amount, 0);
+  const overdue = all.filter((i) => i.overdue);
+  const od = overdue.reduce((s, i) => s + i.amount, 0);
+  let h = monthBar('<button class="btn soft sm" data-a="billNew">' + 'Добавить</button>');
+  h += '<div class="grid2"><div class="stat"><div class="l">Обязательства за месяц</div><div class="v">' + fmt(total) + '</div></div><div class="stat"><div class="l">Осталось оплатить</div><div class="v">' + fmt(left + od) + '</div>' + (od ? '<div class="xs neg">из них просрочено ' + fmt(od) + '</div>' : '') + '</div></div>';
+  if (!S.bills.length) {
+    h += '<div class="card empty" style="margin-top:16px"><h3>Здесь будут обязательные платежи</h3><p>Кредиты, рассрочки, подписки, аренда. Приложение зарезервирует деньги на них при каждом поступлении.</p><button class="btn primary" data-a="billNew">Добавить платёж</button></div>';
+    return h;
+  }
+  const sec = (title, arr, note) => (arr.length ? '<div class="sect"><h2>' + title + '</h2>' + (note ? '<span class="xs muted">' + note + '</span>' : '') + '</div><div class="list">' + arr.map((i) => billRow(i, { check: true })).join('') + '</div>' : '');
+  h += sec('Просрочено', overdue, 'не оплачено в прошлых месяцах');
+  h += sec('Ожидают оплаты', inM.filter((i) => !i.paid));
+  h += sec('Оплачено', inM.filter((i) => i.paid));
+  h += sec('Пропущено', all.filter((i) => i.inMonth && i.skipped));
+  if (!all.some((i) => i.inMonth)) h += '<div class="card empty" style="margin-top:16px"><h3>В этом месяце платежей нет</h3><p>Регулярные платежи появятся здесь автоматически по их датам.</p></div>';
+  const shown = new Set(all.map((i) => i.bill.id));
+  const others = S.bills.filter((b) => !shown.has(b.id));
+  if (others.length) {
+    h += '<div class="sect"><h2>Не в этом месяце</h2></div><div class="list">' + others.map((b) => {
+      const nx = L.occ(b, L.addDays(L.monthEnd(m), 1), L.monthEnd(L.addMonths(m, 36)))[0];
+      const ended = b.endDate && b.endDate < L.monthStart(m);
+      return '<button class="li" data-a="billEdit" data-b="' + b.id + '"><div class="sp"><div class="t">' + esc(b.name) + '</div><div class="s">' + (ended ? 'закончился ' + fmtDate(b.endDate) : b.date > L.monthEnd(m) ? 'начнётся ' + fmtDate(b.date) : nx ? 'следующий ' + fmtDate(nx) : 'платежей больше нет') + ' · ' + periodText(b) + '</div></div><div class="amt">' + fmt(b.amount) + '</div></button>';
+    }).join('') + '</div>';
+  }
+  return h;
+}
+
+/* ---------- платёж: форма ---------- */
+function catSelect(id, selected) {
+  return '<select class="sel" id="' + id + '">' + S.groups.map((g) => {
+    const cs = S.cats.filter((c) => c.groupId === g.id);
+    return cs.length ? '<optgroup label="' + esc(g.name) + '">' + cs.map((c) => '<option value="' + c.id + '"' + (c.id === selected ? ' selected' : '') + '>' + esc(c.name) + '</option>').join('') + '</optgroup>' : '';
+  }).join('') + '</select>';
+}
+function openBill(id, more) {
+  const b = id ? S.bills.find((x) => x.id === id) : null;
+  if (!b && !S.cats.length) { toast('Сначала создайте категорию'); return; }
+  const first = (S.cats.find((c) => L.catKind(S, c) === 'oblig') || S.cats[0]);
+  const d = b || { span: 0, name: '', catId: more && more.catId || first.id, amount: 0, date: defaultDate(), period: 'month', interval: 30, endDate: '', note: '' };
+  openSheet('<h2>' + (b ? 'Изменить платёж' : 'Новый платёж') + '</h2>' +
+    '<label class="f" for="f-name">Название</label><input class="in" id="f-name" value="' + esc(d.name) + '" placeholder="Например: iCloud 200 ГБ" maxlength="60" ' + (b ? '' : 'data-focus') + '>' +
+    '<label class="f" for="f-cat">Категория</label>' + catSelect('f-cat', d.catId) +
+    '<div class="two"><div><label class="f" for="f-amount">Сумма</label><input class="in" id="f-amount" inputmode="decimal" autocomplete="off" placeholder="0" value="' + kopToInput(d.amount) + '"></div><div><label class="f" for="f-date">Ближайший платёж</label>' + dateField('f-date', d.date) + '</div></div>' +
+    '<label class="f" for="f-dto">Оплатить по (если есть период)</label>' + dateField('f-dto', d.span > 0 ? L.addDays(d.date, d.span) : '') +
+    '<label class="f" for="f-period">Периодичность</label><select class="sel" id="f-period" data-c="period">' + Object.keys(PERIODS).map((k) => '<option value="' + k + '"' + (d.period === k ? ' selected' : '') + '>' + PERIODS[k] + '</option>').join('') + '</select>' +
+    '<div id="f-ivw" ' + (d.period === 'custom' ? '' : 'hidden') + '><label class="f" for="f-iv">Интервал, дней</label><input class="in" id="f-iv" inputmode="numeric" value="' + (d.interval || 30) + '"></div>' +
+    '<label class="f" for="f-end">Дата окончания (если есть)</label>' + dateField('f-end', d.endDate || '') + '' +
+    '<label class="f" for="f-note">Комментарий</label><textarea class="ta" id="f-note" maxlength="300">' + esc(d.note || '') + '</textarea>' +
+    '<p class="xs muted" style="margin-top:8px">Статус «ожидает» или «оплачено» ставится отдельно для каждой даты в списке платежей.</p>' +
+    '<div class="errt" id="f-err"></div><div class="foot"><button class="btn primary block" data-a="billSave" data-b="' + (b ? b.id : '') + '">Сохранить</button>' +
+    (b ? '<button class="btn danger block" data-a="billDel" data-b="' + b.id + '">Удалить платёж</button>' : (ui.screen === 'wizard' ? '<button class="btn soft block" data-a="billSave" data-b="" data-more="1">Сохранить и добавить ещё</button>' : '')) +
+    '<button class="btn block" data-a="close">Отмена</button></div>');
+}
+function saveBill(id, more) {
+  const err = (t) => { $('#f-err').textContent = t; };
+  const name = val('f-name').trim(), amount = L.parseMoney(val('f-amount')), date = val('f-date'), period = val('f-period');
+  const interval = parseInt(val('f-iv'), 10), end = val('f-end'), dto = val('f-dto');
+  if (!name) return err('Введите название платежа');
+  if (!amount || amount <= 0) return err('Введите сумму больше нуля');
+  if (!L.validDate(date)) return err('Укажите дату ближайшего платежа');
+  if (period === 'custom' && !(interval >= 1)) return err('Интервал должен быть не меньше 1 дня');
+  if (end && (!L.validDate(end) || end < date)) return err('Дата окончания не может быть раньше даты платежа');
+  if (dto && (!L.validDate(dto) || dto < date)) return err('Дата «Оплатить по» не может быть раньше даты платежа');
+  if (dto && L.daysBetween(date, dto) > 90) return err('Период оплаты не может быть длиннее 90 дней');
+  const o = { span: dto ? L.daysBetween(date, dto) : 0, name, catId: val('f-cat'), amount, date, period, interval: period === 'custom' ? interval : 0, endDate: end || '', note: val('f-note').trim() };
+  if (id) Object.assign(S.bills.find((b) => b.id === id), o);
+  else S.bills.push(Object.assign({ id: L.uid(), skipped: [] }, o));
+  commit(); closeSheet(); toast('Платёж сохранён');
+  if (more) openBill(null, { catId: o.catId });
+}
+function openPay(id, due) {
+  const b = S.bills.find((x) => x.id === id); if (!b) return;
+  const it = L.billItems(S, ui.month).find((i) => i.bill.id === id && i.due === due) || { amount: b.amount };
+  const bal = L.cat(S, b.catId) ? L.env(S, b.catId, L.monthOf(L.today()) > ui.month ? L.monthOf(L.today()) : ui.month).bal : 0;
+  openSheet('<h2>' + esc(b.name) + '</h2><div class="muted sm">Платёж на ' + (it.dueEnd ? spanText(due, it.dueEnd) : fmtDate(due)) + ' · ' + esc(catName(b.catId)) + '</div>' +
+    '<label class="f" for="f-amount">Сколько оплачено</label><input class="bigin" id="f-amount" inputmode="decimal" value="' + kopToInput(it.amount) + '" data-focus>' +
+    '<label class="f" for="f-date">Дата оплаты</label>' + dateField('f-date', L.today()) + '' +
+    '<div class="banner ' + (bal >= it.amount ? 'good' : '') + '" style="margin-top:14px"><div>' + (bal >= it.amount ? 'Деньги отложены в категории. Они спишутся один раз.' : 'В категории не хватает <b>' + fmt(it.amount - Math.max(0, bal)) + '</b>. Оплата уменьшит свободные деньги.') + '</div></div>' +
+    '<div class="errt" id="f-err"></div><div class="foot"><button class="btn primary block" data-a="paySave" data-b="' + id + '" data-d="' + due + '">Оплачено</button><button class="btn block" data-a="paySkip" data-b="' + id + '" data-d="' + due + '">Пропустить этот платёж</button><button class="btn ghost block" data-a="close">Отмена</button></div>');
+}
+
+/* ---------- расход ---------- */
+let expSel = '';
+function openExpense(o) {
+  o = o || {};
+  const tx = o.txId ? S.txs.find((t) => t.id === o.txId) : null;
+  expSel = tx ? (L.cat(S, tx.catId) ? tx.catId : '') : (o.cat || '');
+  const d = tx ? tx.date : defaultDate();
+  openSheet('<h2>' + (tx ? 'Изменить расход' : 'Расход') + '</h2>' +
+    (tx && tx.billId ? '<div class="banner good"><div>Это оплата платежа «' + esc(tx.title) + '».</div></div>' : '') +
+    '<input class="bigin" id="f-amount" inputmode="decimal" autocomplete="off" placeholder="0" aria-label="Сумма" value="' + (tx ? kopToInput(tx.amount) : '') + '" data-i="expAmt" ' + (tx ? '' : 'data-focus') + '>' +
+    '<label class="f">Категория</label>' + S.groups.map((g) => { const cs = S.cats.filter((c) => c.groupId === g.id); return cs.length ? '<div class="xs muted" style="margin:10px 0 6px">' + esc(g.name) + '</div><div class="chips">' + cs.map((c) => '<button class="chip ' + (c.id === expSel ? 'on' : '') + '" data-a="pickCat" data-id="' + c.id + '">' + esc(c.name) + '</button>').join('') + '</div>' : ''; }).join('') +
+    '<div class="sm" id="f-info" style="margin-top:12px;min-height:22px"></div>' +
+    '<div class="two"><div><label class="f" for="f-date">Дата</label>' + dateField('f-date', d) + '</div><div><label class="f" for="f-title">Название</label><input class="in" id="f-title" maxlength="60" placeholder="Необязательно" value="' + esc(tx ? tx.title : '') + '"></div></div>' +
+    '<details style="margin-top:12px"><summary class="sm muted" style="min-height:40px;display:flex;align-items:center">Способ оплаты</summary><select class="sel" id="f-method"><option value="">Не указан</option>' + ['Карта', 'Наличные', 'Перевод', 'Другое'].map((x) => '<option' + (tx && tx.method === x ? ' selected' : '') + '>' + x + '</option>').join('') + '</select></details>' +
+    '<div class="errt" id="f-err"></div><div class="foot"><button class="btn primary block" data-a="expSave" data-id="' + (tx ? tx.id : '') + '">Сохранить</button>' + (tx ? '<button class="btn danger block" data-a="txDel" data-id="' + tx.id + '">Удалить расход</button>' : '') + '' + backBtn(o.fromMenu && !tx) + '</div>');
+  expInfo(tx);
+}
+function expInfo(tx) {
+  const el = $('#f-info'); if (!el) return;
+  if (!expSel) { el.innerHTML = '<span class="muted">Выберите категорию</span>'; return; }
+  const date = val('f-date') || defaultDate(), m = L.validDate(date) ? L.monthOf(date) : ui.month;
+  const amt = L.parseMoney(val('f-amount')) || 0;
+  let bal = L.env(S, expSel, m).bal;
+  if (tx && tx.catId === expSel && L.monthOf(tx.date) <= m) bal += tx.amount;
+  const after = bal - amt;
+  el.innerHTML = 'Остаток: <b>' + fmt(bal) + '</b>' + (amt > 0 ? ' → после <b class="' + (after < 0 ? 'neg' : '') + '">' + fmt(after) + '</b>' : '') + (after < 0 && amt > 0 ? ' <span class="pill bad">перерасход</span>' : '');
+}
+function saveExpense(id) {
+  const err = (t) => { $('#f-err').textContent = t; };
+  const amount = L.parseMoney(val('f-amount')), date = val('f-date');
+  if (!amount || amount <= 0) return err('Введите сумму больше нуля');
+  if (!expSel) return err('Выберите категорию');
+  if (!L.validDate(date)) return err('Укажите дату');
+  const o = { amount, date, catId: expSel, title: val('f-title').trim(), method: val('f-method') };
+  if (id) Object.assign(S.txs.find((t) => t.id === id), o); else L.addExpense(S, o);
+  commit(); closeSheet(); toast('Расход сохранён');
+}
+
+/* ---------- доход ---------- */
+let incSel = 'extra';
+function openIncome(o) {
+  o = o || {};
+  const tx = o.txId ? S.txs.find((t) => t.id === o.txId) : null;
+  const only = tx ? '' : (o.only || (o.extra ? 'extra' : ''));
+  const pend = only === 'extra' ? [] : L.slots(S, ui.month).filter((x) => !x.received);
+  if (only === 'slot' && !pend.length) {
+    openSheet('<h2>Плановых поступлений нет</h2><p class="muted" style="margin-top:6px">Все поступления этого месяца уже получены или не настроены. Если пришли другие деньги, добавьте их как доход.</p><div class="foot"><button class="btn primary block" data-a="incExtra">Добавить доход</button><button class="btn block" data-a="close">Закрыть</button></div>');
+    return;
+  }
+  incSel = tx ? (tx.slotId || 'extra') : (only === 'extra' ? 'extra' : (o.slot && pend.some((x) => x.slot.id === o.slot) ? o.slot : (pend.find((x) => x.date <= L.today()) || pend[0] || { slot: { id: 'extra' } }).slot.id));
+  const cur = pend.find((x) => x.slot.id === incSel);
+  const amount = tx ? tx.amount : (cur && cur.planned > 0 ? cur.planned : 0);
+  const src = tx ? tx.source : (cur ? cur.slot.name : '');
+  let pick = '';
+  if (!tx && only !== 'extra') pick = '<label class="f">Какое поступление</label><div class="chips" id="f-slots">' + pend.map((x) => '<button class="chip ' + (x.slot.id === incSel ? 'on' : '') + '" data-a="pickSlot" data-id="' + x.slot.id + '">' + esc(x.slot.name) + ' · ' + slotWhen(x) + '</button>').join('') + (only === 'slot' ? '' : '<button class="chip ' + (incSel === 'extra' ? 'on' : '') + '" data-a="pickSlot" data-id="extra">Другой доход</button>') + '</div>';
+  const recvLabel = gv('Получила деньги', 'Получил деньги', 'Деньги поступили');
+  const title = tx ? 'Изменить доход' : only === 'extra' ? 'Новый доход' : recvLabel;
+  openSheet('<h2>' + title + '</h2>' + pick +
+    '<label class="f" for="f-amount">Сколько поступило</label><input class="bigin" id="f-amount" inputmode="decimal" autocomplete="off" placeholder="0" value="' + kopToInput(amount) + '" data-focus><div class="xs muted" id="f-plan" style="text-align:center;margin-top:6px">' + (cur && cur.planned > 0 ? 'План: ' + fmt(cur.planned) + '. Измените сумму, если пришло другое.' : '') + '</div>' +
+    '<div class="two"><div><label class="f" for="f-date">Дата</label>' + dateField('f-date', tx ? tx.date : (L.monthOf(L.today()) === ui.month ? L.today() : (cur ? cur.date : defaultDate()))) + '</div><div><label class="f" for="f-src">Источник</label><input class="in" id="f-src" maxlength="60" placeholder="Например: подработка" value="' + esc(src) + '"></div></div>' +
+    (tx ? '' : '<p class="xs muted" style="margin-top:10px">Баланс увеличится сразу. Дальше приложение предложит распределить деньги по правилам.</p>') +
+    '<div class="errt" id="f-err"></div><div class="foot"><button class="btn primary block" data-a="incSave" data-id="' + (tx ? tx.id : '') + '">' + (tx ? 'Сохранить' : only === 'extra' ? 'Добавить доход' : recvLabel) + '</button>' + (tx ? '<button class="btn danger block" data-a="txDel" data-id="' + tx.id + '">Удалить доход</button>' : '') + '' + backBtn(o.fromMenu && !tx) + '</div>');
+}
+function saveIncome(id) {
+  const err = (t) => { $('#f-err').textContent = t; };
+  const amount = L.parseMoney(val('f-amount')), date = val('f-date');
+  if (!amount || amount <= 0) return err('Введите сумму больше нуля');
+  if (!L.validDate(date)) return err('Укажите дату');
+  if (id) {
+    Object.assign(S.txs.find((t) => t.id === id), { amount, date, source: val('f-src').trim() });
+    commit(); closeSheet(); toast('Доход сохранён');
+    if (L.totals(S, L.monthOf(date)).unalloc < 0) setTimeout(() => toast('Выделено больше, чем есть на руках. Проверьте конверты.'), 1800);
+    return;
+  }
+  const tx = L.addIncome(S, { slotId: incSel === 'extra' ? null : incSel, slotMonth: ui.month, date, amount, source: val('f-src').trim() });
+  ui.month = L.monthOf(date);
+  commit(false); closeSheet();
+  openAlloc({ income: tx.id, month: ui.month, refDate: date });
+}
+
+/* ---------- История ---------- */
+function viewHist() {
+  const m = ui.month;
+  let rows = [];
+  S.txs.forEach((t) => { if (ui.fAll || L.monthOf(t.date) === m) rows.push({ k: 'tx', t, date: t.date }); });
+  L.allocGroups(S).forEach((g) => { if (ui.fAll || L.monthOf(g.date) === m) rows.push({ k: 'ag', g, date: g.date }); });
+  if (ui.fCat) rows = rows.filter((r) => (r.k === 'tx' ? r.t.type === 'expense' && r.t.catId === ui.fCat : r.g.items.some((a) => a.catId === ui.fCat)));
+  if (ui.fType === 'expense') rows = rows.filter((r) => r.k === 'tx' && r.t.type === 'expense');
+  if (ui.fType === 'income') rows = rows.filter((r) => r.k === 'tx' && r.t.type === 'income');
+  if (ui.fType === 'alloc') rows = rows.filter((r) => r.k === 'ag');
+  rows.sort((a, b) => (a.date < b.date ? 1 : a.date > b.date ? -1 : 0));
+  const inc = rows.filter((r) => r.k === 'tx' && r.t.type === 'income').reduce((s, r) => s + r.t.amount, 0);
+  const exp = rows.filter((r) => r.k === 'tx' && r.t.type === 'expense').reduce((s, r) => s + r.t.amount, 0);
+  let h = ui.fAll ? '<div class="top"><div class="pagetitle" style="padding:0 6px">История</div></div>' : monthBar();
+  h += '<div class="stack"><div class="chips"><button class="chip ' + (ui.fAll ? 'on' : '') + '" data-a="hAll">Все месяцы</button>' + [['all', 'Все'], ['expense', 'Расходы'], ['income', 'Доходы'], ['alloc', 'Распределение']].map((x) => '<button class="chip ' + (ui.fType === x[0] ? 'on' : '') + '" data-a="hType" data-t="' + x[0] + '">' + x[1] + '</button>').join('') + '</div>';
+  h += '<select class="sel" id="h-cat" data-c="hCat" aria-label="Категория"><option value="">Все категории</option>' + S.groups.map((g) => '<optgroup label="' + esc(g.name) + '">' + S.cats.filter((c) => c.groupId === g.id).map((c) => '<option value="' + c.id + '"' + (ui.fCat === c.id ? ' selected' : '') + '>' + esc(c.name) + '</option>').join('') + '</optgroup>').join('') + '</select></div>';
+  if (!rows.length) {
+    return h + '<div class="card empty" style="margin-top:16px"><h3>' + (S.txs.length || S.allocs.length ? 'Ничего не найдено' : 'Операций пока нет') + '</h3><p>' + (S.txs.length || S.allocs.length ? 'Измените фильтры или месяц.' : 'Добавьте первый доход или расход.') + '</p><button class="btn primary" data-a="expNew">Добавить расход</button> <button class="btn soft" data-a="incExtra">Добавить доход</button></div>';
+  }
+  h += '<div class="grid2" style="margin-top:14px"><div class="stat"><div class="l">Доходы</div><div class="v pos">' + fmt(inc) + '</div></div><div class="stat"><div class="l">Расходы</div><div class="v">' + fmt(exp) + '</div></div></div>';
+  let last = '';
+  rows.forEach((r) => {
+    if (r.date !== last) { if (last) h += '</div>'; last = r.date; h += '<div class="gh"><h3>' + fmtDate(r.date) + '</h3></div><div class="list">'; }
+    h += histRow(r);
+  });
+  return h + '</div>';
+}
+function histRow(r) {
+  if (r.k === 'tx') {
+    const t = r.t;
+    if (t.type === 'income') return '<button class="li" data-a="txOpen" data-id="' + t.id + '"><div class="sp"><div class="t">' + esc(t.source || 'Доход') + '</div><div class="s">' + (t.kind === 'plan' ? 'Плановое поступление' : 'Дополнительный доход') + '</div></div><div class="amt pos">' + fmt(t.amount, { sign: true }) + '</div></button>';
+    return '<button class="li" data-a="txOpen" data-id="' + t.id + '"><div class="sp"><div class="t">' + esc(t.title || catName(t.catId)) + '</div><div class="s">' + esc(catName(t.catId)) + (t.method ? ' · ' + esc(t.method) : '') + (t.billId ? ' · платёж' : '') + '</div></div><div class="amt">−' + fmt(t.amount) + '</div></button>';
+  }
+  const g = r.g, tot = g.items.reduce((s, a) => s + a.amount, 0);
+  let title, sub, amt = fmt(Math.abs(tot));
+  if (g.kind === 'move') { const a = g.items.find((x) => x.amount < 0), b = g.items.find((x) => x.amount > 0); title = 'Перенос'; sub = esc(catName(a && a.catId)) + ' → ' + esc(catName(b && b.catId)); amt = fmt(b ? b.amount : 0); }
+  else if (g.kind === 'income') { title = 'Распределение поступления'; sub = g.items.length + ' ' + plural(g.items.length, ['категория', 'категории', 'категорий']); }
+  else { title = tot >= 0 ? 'Пополнение конверта' : 'Возврат в свободные'; sub = esc(catName(g.items[0].catId)); }
+  return '<button class="li" data-a="agOpen" data-id="' + esc(g.key) + '"><div class="sp"><div class="t">' + title + '</div><div class="s">' + sub + '</div></div><div class="amt muted">' + amt + '</div></button>';
+}
+function openAg(key) {
+  const g = L.allocGroups(S).find((x) => x.key === key); if (!g) return;
+  const ttl = g.kind === 'move' ? 'Перенос между категориями' : g.kind === 'income' ? 'Распределение поступления' : 'Ручное изменение конверта';
+  openSheet('<h2>' + ttl + '</h2><div class="muted sm">' + fmtDate(g.date) + ' · деньги на руках не меняются</div><div style="margin-top:10px">' + g.items.map((a) => '<div class="ar"><div class="sp">' + esc(catName(a.catId)) + '</div><div class="amt ' + (a.amount < 0 ? 'neg' : '') + '">' + fmt(a.amount, { sign: true }) + '</div></div>').join('') + '</div><div class="foot"><button class="btn danger block" data-a="agDel" data-id="' + esc(key) + '">Удалить эту запись</button><button class="btn block" data-a="close">Закрыть</button></div>');
+}
+
+/* ---------- быстрая запись голосом или текстом ---------- */
+let qk = null, rec = null, listening = false, recErr = false;
+function openQuick(auto) {
+  qk = { catManual: false, amtManual: false, dateOff: 0, words: [], title: '' };
+  openSheet('<h2>Быстрая запись</h2><p class="muted sm" style="margin-top:4px">Скажите или напишите: «вода 85» или «купила кофе за 250».</p>' +
+    '<div class="qwrap"><input class="in" id="q-text" autocomplete="off" autocapitalize="sentences" placeholder="Что и сколько" data-i="qText"><button class="micb" id="q-mic" data-a="qMic" aria-label="Говорить">' + ic('mic') + '</button></div>' +
+    '<div class="sm muted" id="q-status" style="margin-top:8px;min-height:22px" role="status"></div>' +
+    '<div class="two" style="margin-top:6px"><div><label class="f" for="q-amt">Сумма</label><input class="in" id="q-amt" inputmode="decimal" placeholder="0" data-i="qAmt"></div><div><label class="f">Когда</label><div class="in" id="q-when" style="display:flex;align-items:center">Сегодня</div></div></div>' +
+    '<label class="f" for="q-cat">Категория</label><select class="sel" id="q-cat" data-c="qCat"><option value="">Выберите категорию</option>' + S.groups.map((g) => '<optgroup label="' + esc(g.name) + '">' + S.cats.filter((c) => c.groupId === g.id).map((c) => '<option value="' + c.id + '">' + esc(c.name) + '</option>').join('') + '</optgroup>').join('') + '</select>' +
+    '<div class="errt" id="f-err"></div><div class="foot"><button class="btn primary block" id="q-save" data-a="qSave" disabled>Добавить расход</button><button class="btn ghost block" data-a="qMore">Подробнее</button><button class="btn block" data-a="close">Закрыть</button></div>');
+  if (auto) startListen(); else focusQ();
+}
+const focusQ = () => { const e = document.getElementById('q-text'); if (e) setTimeout(() => e.focus(), 50); };
+function qStatus(t, bad) { const e = document.getElementById('q-status'); if (e) { e.textContent = t; e.style.color = bad ? 'var(--warn)' : ''; } }
+function qMicUi() { const b = document.getElementById('q-mic'); if (b) { b.classList.toggle('on', listening); b.setAttribute('aria-label', listening ? 'Остановить запись' : 'Говорить'); } }
+function qUpdate() {
+  const t = val('q-text'), r = L.parseQuick(t);
+  qk.words = r.words; qk.title = r.title; qk.dateOff = r.dateOff;
+  const amt = document.getElementById('q-amt');
+  if (!qk.amtManual) amt.value = r.amount ? kopToInput(r.amount) : '';
+  const cat = document.getElementById('q-cat');
+  if (!qk.catManual) cat.value = L.guessCat(S, r.words) || '';
+  document.getElementById('q-when').textContent = r.dateOff === -1 ? 'Вчера' : 'Сегодня';
+  qCheck();
+}
+function qCheck() {
+  const a = L.parseMoney(val('q-amt')), c = val('q-cat'), b = document.getElementById('q-save');
+  if (b) b.disabled = !(a > 0 && c);
+}
+function startListen() {
+  const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+  if (!SR) { qStatus('Голосовой ввод здесь недоступен. Наберите текст или нажмите значок микрофона на клавиатуре телефона.', true); focusQ(); return; }
+  stopListen(); recErr = false;
+  try {
+    rec = new SR(); rec.lang = 'ru-RU'; rec.interimResults = true; rec.continuous = false; rec.maxAlternatives = 1;
+    rec.onstart = () => { listening = true; qMicUi(); qStatus('Слушаю. Скажите, например: «вода 85»'); };
+    rec.onresult = (e) => { let t = ''; for (let i = 0; i < e.results.length; i++) t += e.results[i][0].transcript + ' '; const el = document.getElementById('q-text'); if (el) { el.value = t.trim(); qUpdate(); } };
+    rec.onerror = (e) => {
+      recErr = true;
+      const m = { 'not-allowed': 'Нет доступа к микрофону. Разрешите его в настройках браузера или наберите текст.', 'service-not-allowed': 'Нет доступа к микрофону. Разрешите его в настройках браузера или наберите текст.', network: 'Для распознавания голоса нужен интернет. Можно набрать текст.', 'no-speech': 'Речь не распознана. Нажмите микрофон и повторите.', 'audio-capture': 'Микрофон не найден.' };
+      qStatus(m[e.error] || 'Голосовой ввод не сработал. Наберите текст.', true);
+      if (e.error !== 'no-speech') focusQ();
+    };
+    rec.onend = () => { listening = false; qMicUi(); if (!recErr) { const el = document.getElementById('q-text'); qStatus(el && el.value.trim() ? 'Проверьте сумму и категорию, затем нажмите «Добавить расход».' : 'Ничего не услышала. Нажмите микрофон и повторите.'); } };
+    rec.start();
+  } catch (err) { qStatus('Голосовой ввод не запустился. Наберите текст.', true); focusQ(); }
+}
+function stopListen() { try { if (rec) { rec.onend = null; rec.onerror = null; rec.abort(); } } catch (e) { /* уже остановлено */ } rec = null; listening = false; qMicUi(); }
+function saveQuick() {
+  const amount = L.parseMoney(val('q-amt')), cid = val('q-cat');
+  if (!(amount > 0)) return void (document.getElementById('f-err').textContent = 'Введите сумму больше нуля');
+  if (!cid) return void (document.getElementById('f-err').textContent = 'Выберите категорию');
+  const date = L.addDays(L.today(), qk.dateOff);
+  L.addExpense(S, { date, amount, catId: cid, title: qk.title });
+  L.learnCat(S, qk.words, cid);
+  commit(); closeSheet(); toast('Записано: ' + (qk.title ? qk.title + ' ' : '') + fmt(amount) + ' · ' + catName(cid));
+}
+
+/* ===== ИНТЕРФЕЙС: распределение, правила, настройки, мастер, обработчики ===== */
+const GKIND = { oblig: 'На обязательные платежи', daily: 'На повседневное', personal: 'На личное', goals: 'В накопления и цели' };
+const PRIOS = ['1 · Самый высокий', '2 · Высокий', '3 · Средний', '4 · Низкий', '5 · Самый низкий'];
+const RTYPES = { manual: 'Вручную', fixedMonth: 'Сумма в месяц', fixedEach: 'Сумма с каждого поступления', pctIncome: '% от поступления', pctRemainder: '% от остатка после обязательств' };
+const ruleText = (c) => {
+  const r = c.rule; let t = '';
+  if (r.type === 'manual') t = 'Вручную';
+  else if (r.type === 'fixedMonth') t = fmt(r.amount) + ' в месяц';
+  else if (r.type === 'fixedEach') t = fmt(r.amount) + ' с каждого поступления';
+  else if (r.type === 'pctIncome') t = r.pct + '% от поступления';
+  else t = r.pct + '% от остатка после обязательств';
+  if (r.min > 0) t += ' · минимум ' + fmt(r.min);
+  if (r.max > 0) t += ' · максимум ' + fmt(r.max);
+  return t;
+};
+
+/* ---------- предпросмотр распределения ---------- */
+function openAlloc(o) {
+  o = o || {};
+  ui.pv = { m: o.month || ui.month, income: o.income || null, refDate: o.refDate || null, fresh: !!o.fresh, mode: null, res: null, adds: {} };
+  pvCompute();
+}
+function pvCompute() {
+  const pv = ui.pv;
+  pv.res = L.planAllocation(S, pv.m, { refDate: pv.refDate || undefined, fresh: pv.fresh, conflictMode: pv.mode });
+  pv.adds = Object.assign({}, pv.res.adds);
+  renderPv();
+}
+function pvReason(c) {
+  const ev = ui.pv.res.events.filter((e) => e.catId === c.id).map((e) => (e.kind === 'bill' ? 'Платёж «' + e.label + '» до ' + fmtDate(e.due) : e.kind === 'min' ? 'Минимальная сумма' : e.label));
+  return ev.join(' · ');
+}
+function renderPv() {
+  const pv = ui.pv, r = pv.res, m = pv.m;
+  const inc = pv.income ? S.txs.find((t) => t.id === pv.income) : null;
+  const need = (c) => r.billNeed[c.id] || 0;
+  const short = (c) => r.shortfalls.some((s) => s.catId === c.id);
+  const prim = S.cats.filter((c) => (pv.adds[c.id] || 0) > 0 || need(c) > 0 || short(c));
+  const rest = S.cats.filter((c) => !prim.includes(c));
+  const row = (c) => '<div class="ar"><div class="sp"><div class="t">' + esc(c.name) + '</div><div class="xs muted">' + (pvReason(c) ? esc(pvReason(c)) + ' · ' : '') + 'сейчас ' + fmt(L.env(S, c.id, m).bal) + '</div><div class="xs warnc" id="pw-' + c.id + '"></div></div><input class="in" inputmode="decimal" autocomplete="off" placeholder="0" aria-label="' + esc(c.name) + '" data-i="pv" data-id="' + c.id + '" value="' + kopToInput(pv.adds[c.id] || 0) + '"></div>';
+  let h = '<h2>Распределение денег</h2>';
+  h += '<p class="muted sm">' + (inc ? 'Поступило <b>' + fmt(inc.amount) + '</b>' + (inc.planned > 0 ? ' (план ' + fmt(inc.planned) + ')' : '') + '. ' : '') + 'Свободно для распределения: <b>' + fmt(Math.max(0, r.unalloc)) + '</b>. Баланс на руках от распределения не меняется.</p>';
+  if (r.conflicts.length) {
+    const c0 = r.conflicts[0];
+    h += '<div class="banner bad" style="margin-top:12px"><div><b>Денег не хватает на равнозначные платежи на ' + fmtDate(c0.due) + '.</b> Нужно ' + fmt(c0.total) + ', есть ' + fmt(c0.pool) + '. Выберите, как поступить:<div style="margin-top:6px">' + c0.items.map((x) => esc(x.label) + ' — ' + fmt(x.need)).join('<br>') + '</div><div class="stack" style="margin-top:10px"><button class="btn sm" data-a="pvConflict" data-mode="proportional">Разделить поровну по доле</button><button class="btn sm" data-a="pvConflict" data-mode="order">Сначала по порядку категорий</button><span class="xs muted">Или закройте окно и распределите вручную.</span></div></div></div>';
+  }
+  if (r.deferred.length) h += '<div class="banner good" style="margin-top:12px"><div>' + r.deferred.length + ' ' + plural(r.deferred.length, ['платёж', 'платежа', 'платежей']) + ' (' + fmt(r.deferred.reduce((s, i) => s + i.short, 0)) + ') позже ближайшего поступления' + (r.horizon <= L.monthEnd(m) ? ' (' + fmtDate(r.horizon) + ')' : '') + '. Деньги на них зарезервируются из следующего поступления.</div></div>';
+  if (r.surplus > 0) h += '<div class="banner good" style="margin-top:12px"><div>Поступило на <b>' + fmt(r.surplus) + '</b> больше плана. Лишнее остаётся свободным, если не задать суммы ниже.</div></div>';
+  if (r.unalloc <= 0 && !r.conflicts.length) h += '<div class="banner" style="margin-top:12px"><div>Свободных денег для распределения нет.</div></div>';
+  h += '<div class="grid2" style="margin-top:14px">' + ['oblig', 'daily', 'personal', 'goals'].map((k) => '<div class="stat"><div class="l">' + GKIND[k] + '</div><div class="v" id="pv-g-' + k + '">0</div></div>').join('') + '</div>';
+  h += '<div class="stat" style="margin-top:10px;background:var(--accent-soft);border:0"><div class="l" style="color:var(--accent-deep)">Останется свободным</div><div class="v" id="pv-free">0</div></div>';
+  if (r.shortfalls.length) {
+    h += '<div class="card" style="margin-top:12px"><b>Пока не обеспечено</b>' + r.shortfalls.map((s) => { const c = L.cat(S, s.catId); const g = c && L.catKind(S, c) === 'goals'; return '<div class="row sm" style="margin-top:8px"><div class="sp">' + esc(s.kind === 'bill' ? s.label + ' (' + esc(catName(s.catId)) + ')' : catName(s.catId)) + (g ? ' <span class="pill">цель</span>' : '') + '</div><div class="amt warnc">−' + fmt(s.short) + '</div></div>'; }).join('') + '</div>';
+  }
+  h += '<div style="margin-top:14px">' + prim.map(row).join('') + '</div>';
+  if (rest.length) h += '<details style="margin-top:6px"><summary class="sm muted" style="min-height:44px;display:flex;align-items:center">Остальные категории (' + rest.length + ')</summary>' + rest.map(row).join('') + '</details>';
+  if (S.allocs.some((a) => a.kind === 'income' && a.month === m)) h += '<label class="check" style="margin-top:8px"><input type="checkbox" data-c="pvFresh"' + (pv.fresh ? ' checked' : '') + '>Заменить прежнее автораспределение месяца</label>';
+  h += '<div class="errt" id="pv-err"></div><div class="foot"><button class="btn primary block" id="pv-apply" data-a="pvApply">Применить распределение</button><button class="btn block" data-a="pvRecalc">Пересчитать по правилам</button><button class="btn ghost block" data-a="close">' + (pv.income ? 'Оставить нераспределённым' : 'Закрыть') + '</button></div>';
+  setSheet(h);
+  pvLive();
+}
+function pvLive() {
+  const pv = ui.pv; if (!pv) return;
+  let total = 0, bad = false;
+  const g = { oblig: 0, daily: 0, personal: 0, goals: 0 };
+  document.querySelectorAll('#ov [data-i="pv"]').forEach((el) => {
+    const raw = el.value.trim(), v = raw === '' ? 0 : L.parseMoney(raw);
+    el.classList.toggle('err', v === null);
+    if (v === null) { bad = true; return; }
+    pv.adds[el.dataset.id] = v; total += v;
+    const c = L.cat(S, el.dataset.id); g[L.catKind(S, c)] = (g[L.catKind(S, c)] || 0) + v;
+    const need = pv.res.billNeed[el.dataset.id] || 0, w = document.getElementById('pw-' + el.dataset.id);
+    if (w) w.textContent = need > v ? 'Не хватит на платежи: ещё ' + fmt(need - v) : '';
+  });
+  Object.keys(g).forEach((k) => { const e = document.getElementById('pv-g-' + k); if (e) e.textContent = fmt(g[k]); });
+  const free = pv.res.unalloc - total, fe = document.getElementById('pv-free');
+  if (fe) { fe.textContent = fmt(free); fe.style.color = free < 0 ? 'var(--bad)' : ''; }
+  const err = document.getElementById('pv-err'), btn = document.getElementById('pv-apply');
+  const msg = bad ? 'Проверьте суммы: нужны числа.' : free < 0 ? 'Выделяется больше, чем есть свободных денег: на ' + fmt(-free) + '. Уменьшите суммы.' : '';
+  if (err) err.textContent = msg;
+  if (btn) btn.disabled = !!msg || total === 0;
+}
+function pvApply() {
+  const pv = ui.pv; pvLive();
+  const r = L.applyAllocation(S, pv.m, pv.adds, { incomeId: pv.income, fresh: pv.fresh, date: pv.refDate || L.today() });
+  if (!r.ok) { $('#pv-err').textContent = r.error; return; }
+  ui.pv = null; commit(); closeSheet(); toast('Деньги распределены');
+}
+
+/* ---------- правила ---------- */
+let rs = null;
+function openRule(id) {
+  const c = L.cat(S, id); if (!c) return;
+  rs = Object.assign({ id }, c.rule);
+  renderRuleSheet();
+}
+function ruleCollect() {
+  if (!rs) return;
+  const v = (i) => (document.getElementById(i) ? document.getElementById(i).value : null);
+  if (v('r-val') !== null) { const k = L.parseMoney(v('r-val')); if (rs.type === 'pctIncome' || rs.type === 'pctRemainder') rs.pct = parseFloat(String(v('r-val')).replace(',', '.')) || 0; else rs.amount = k || 0; }
+  if (v('r-min') !== null) rs.min = L.parseMoney(v('r-min')) || 0;
+  if (v('r-max') !== null) rs.max = L.parseMoney(v('r-max')) || 0;
+  if (v('r-pr') !== null) rs.priority = +v('r-pr');
+}
+function renderRuleSheet() {
+  const c = L.cat(S, rs.id), pctT = rs.type === 'pctIncome' || rs.type === 'pctRemainder';
+  const hasBills = S.bills.some((b) => b.catId === c.id);
+  setSheet('<h2>' + esc(c.name) + '</h2><div class="muted sm">Как пополнять эту категорию</div>' +
+    (hasBills ? '<div class="banner good" style="margin-top:10px"><div>Платежи этой категории резервируются автоматически по датам и суммам.</div></div>' : '') +
+    '<div class="chips" style="margin-top:12px">' + Object.keys(RTYPES).map((k) => '<button class="chip ' + (rs.type === k ? 'on' : '') + '" data-a="ruleType" data-k="' + k + '">' + RTYPES[k] + '</button>').join('') + '</div>' +
+    (rs.type === 'manual' ? '<p class="xs muted" style="margin-top:10px">Деньги не назначаются сами. Пополняйте вручную в разделе «Бюджет».</p>' : '<label class="f" for="r-val">' + (pctT ? 'Процент' : 'Сумма') + '</label><input class="in" id="r-val" inputmode="decimal" placeholder="0" value="' + (pctT ? (rs.pct || '') : kopToInput(rs.amount)) + '">') +
+    '<label class="f" for="r-pr">Приоритет при нехватке денег</label><select class="sel" id="r-pr">' + PRIOS.map((p, i) => '<option value="' + (i + 1) + '"' + (rs.priority === i + 1 ? ' selected' : '') + '>' + p + '</option>').join('') + '</select>' +
+    '<div class="two"><div><label class="f" for="r-min">Минимум</label><input class="in" id="r-min" inputmode="decimal" placeholder="0" value="' + kopToInput(rs.min) + '"></div><div><label class="f" for="r-max">Максимум в конверте</label><input class="in" id="r-max" inputmode="decimal" placeholder="Без лимита" value="' + kopToInput(rs.max) + '"></div></div>' +
+    '<p class="xs muted" style="margin-top:8px">Минимум обеспечивается в первую очередь. Максимум не даёт конверту расти выше этой суммы.</p>' +
+    '<div class="errt" id="f-err"></div><div class="foot"><button class="btn primary block" data-a="ruleSave">Сохранить правило</button><button class="btn block" data-a="close">Отмена</button></div>');
+}
+function scrRules() {
+  const ck = L.ruleCheck(S, ui.month);
+  let h = '<div class="top"><button class="ib" data-a="back" aria-label="Назад">' + ic('l') + '</button><div class="pagetitle">Правила</div><span style="width:44px"></span></div>';
+  h += '<p class="muted sm" style="margin:0 4px 14px">При каждом поступлении приложение сначала резервирует деньги на платежи по датам, затем распределяет остаток по приоритетам. Распределение не списывает деньги с баланса.</p>';
+  if (ck.planInc === 0) h += '<div class="banner" style="margin-bottom:12px"><div>Укажите плановые суммы поступлений в настройках, чтобы проверить правила.</div></div>';
+  else if (ck.diff < 0) h += '<div class="banner bad" style="margin-bottom:12px"><div>Правила требуют <b>' + fmt(ck.demand) + '</b>, плановых поступлений <b>' + fmt(ck.planInc) + '</b>. Не хватает ' + fmt(-ck.diff) + '. Категории с низким приоритетом получат меньше.</div></div>';
+  else h += '<div class="banner good" style="margin-bottom:12px"><div>Плановые поступления <b>' + fmt(ck.planInc) + '</b>, правила занимают <b>' + fmt(ck.demand) + '</b>, свободным остаётся <b>' + fmt(ck.diff) + '</b>.</div></div>';
+  if (ck.pctSum > 100) h += '<div class="banner bad" style="margin-bottom:12px"><div>Сумма процентов от поступления больше 100%.</div></div>';
+  h += '<div class="card"><b>Свободный резерв</b><p class="xs muted" style="margin-top:4px">Эта часть каждого поступления не распределяется по категориям и остаётся свободной.</p><div class="two"><div><label class="f" for="rs-pct">% от поступлений</label><input class="in" id="rs-pct" inputmode="decimal" data-i="resPct" placeholder="0" value="' + (S.settings.reservePct || '') + '"></div><div><label class="f" for="rs-fix">Сумма в месяц</label><input class="in" id="rs-fix" inputmode="decimal" data-i="resFix" placeholder="0" value="' + kopToInput(S.settings.reserveFixed || 0) + '"></div></div></div>';
+  S.groups.forEach((g) => {
+    const cs = S.cats.filter((c) => c.groupId === g.id); if (!cs.length) return;
+    h += '<div class="gh"><h3>' + esc(g.name) + '</h3></div><div class="list">' + cs.map((c) => '<button class="li" data-a="ruleEdit" data-id="' + c.id + '"><div class="sp"><div class="t">' + esc(c.name) + '</div><div class="s">' + esc(ruleText(c)) + '</div></div><span class="pill">приоритет ' + c.rule.priority + '</span></button>').join('') + '</div>';
+  });
+  return h + '<div style="margin-top:20px"><button class="btn primary block" data-a="alloc">Распределить автоматически</button></div>';
+}
+
+/* ---------- управление категориями и поступлениями (общее для мастера и настроек) ---------- */
+function catManage() {
+  return S.groups.map((g) => {
+    const cs = S.cats.filter((c) => c.groupId === g.id);
+    return '<div class="gh"><h3>' + esc(g.name) + '</h3></div><div class="list" style="padding:4px 12px">' + cs.map((c, i) => '<div class="row" style="padding:5px 0"><input class="in" style="min-height:44px" value="' + esc(c.name) + '" maxlength="50" aria-label="Название категории" data-i="catName" data-id="' + c.id + '"><button class="ib" data-a="catUp" data-id="' + c.id + '" aria-label="Выше"' + (i === 0 ? ' disabled style="opacity:.3"' : '') + '>' + ic('up') + '</button><button class="ib" data-a="catDn" data-id="' + c.id + '" aria-label="Ниже"' + (i === cs.length - 1 ? ' disabled style="opacity:.3"' : '') + '>' + ic('dn') + '</button><button class="ib" data-a="catDel" data-id="' + c.id + '" aria-label="Удалить">' + ic('tr') + '</button></div>').join('') + '<button class="btn soft sm block" style="margin:6px 0 8px" data-a="catNew" data-g="' + g.id + '">Добавить в «' + esc(g.name) + '»</button></div>';
+  }).join('');
+}
+const planHint = (p) => (p.dayTo > p.day ? 'Деньги приходят с ' + p.day + ' по ' + p.dayTo + ' число каждого месяца.' : 'Деньги приходят ' + p.day + '-го числа. Если дата плавает, укажите «По число».');
+const planHintUpd = (p) => { const e = document.getElementById('ph-' + p.id); if (e) e.textContent = planHint(p); };
+function planHTML() {
+  return '<div class="list" style="padding:4px 14px">' + S.plan.map((p) => '<div style="padding:10px 0;border-top:1px solid var(--line)" class="pr"><div class="row"><input class="in" style="min-height:44px" value="' + esc(p.name) + '" maxlength="40" aria-label="Название" data-i="planName" data-id="' + p.id + '"><button class="ib" data-a="planDel" data-id="' + p.id + '" aria-label="Удалить поступление">' + ic('tr') + '</button></div><div class="two" style="margin-top:8px"><div><label class="f" style="margin:0 0 4px" for="pd-' + p.id + '">С числа</label><input class="in" id="pd-' + p.id + '" inputmode="numeric" data-i="planDay" data-id="' + p.id + '" value="' + p.day + '"></div><div><label class="f" style="margin:0 0 4px" for="pt-' + p.id + '">По число (если период)</label><input class="in" id="pt-' + p.id + '" inputmode="numeric" placeholder="Не нужно" data-i="planDayTo" data-id="' + p.id + '" value="' + (p.dayTo > p.day ? p.dayTo : '') + '"></div></div><label class="f" style="margin:8px 0 4px" for="pa-' + p.id + '">Плановая сумма</label><input class="in" id="pa-' + p.id + '" inputmode="decimal" placeholder="0" data-i="planAmt" data-id="' + p.id + '" value="' + kopToInput(p.amount) + '"><div class="xs muted" id="ph-' + p.id + '" style="margin-top:6px">' + planHint(p) + '</div></div>').join('') + '<button class="btn soft sm block" style="margin:8px 0" data-a="planAdd">Добавить поступление</button></div>';
+}
+function profileHTML() {
+  return '<div class="card"><label class="f" style="margin-top:0" for="pf-name">Как к вам обращаться</label><input class="in" id="pf-name" maxlength="30" placeholder="Ваше имя" autocomplete="given-name" data-i="profName" value="' + esc(S.settings.name || '') + '"><label class="f">Пол, чтобы правильно писать глаголы</label><div class="seg" role="group" aria-label="Пол">' + [['f', 'Женский'], ['m', 'Мужской'], ['', 'Не важно']].map((x) => '<button data-a="gender" data-g="' + x[0] + '" class="' + ((S.settings.gender || '') === x[0] ? 'on' : '') + '">' + x[1] + '</button>').join('') + '</div></div>';
+}
+function maskDate(raw, del) {
+  let d = raw.replace(/\D/g, '').slice(0, 8);
+  if (d.length >= 1 && d[0] > '3') d = '0' + d;
+  if (d.length >= 2 && +d.slice(0, 2) > 31) d = '31' + d.slice(2);
+  if (d.length >= 3 && d[2] > '1') d = d.slice(0, 2) + '0' + d.slice(2);
+  if (d.length >= 4 && +d.slice(2, 4) > 12) d = d.slice(0, 2) + '12' + d.slice(4);
+  d = d.slice(0, 8);
+  let o = d.slice(0, 2);
+  if (d.length > 2) o += '.' + d.slice(2, 4);
+  if (d.length > 4) o += '.' + d.slice(4);
+  if (!del && (d.length === 2 || d.length === 4)) o += '.';
+  return o;
+}
+function moneyHTML() {
+  return '<label class="f" for="st-bal">Начальный остаток (деньги на руках сейчас)</label><input class="in" id="st-bal" inputmode="decimal" placeholder="0" data-i="startBal" value="' + kopToInput(S.settings.startBalance) + '"><div class="two"><div><label class="f" for="st-cur">Валюта</label><select class="sel" id="st-cur" data-c="cur">' + Object.keys(CURS).map((k) => '<option value="' + k + '"' + (S.settings.currency === k ? ' selected' : '') + '>' + CURS[k] + '</option>').join('') + '</select></div><div><label class="f" for="st-cents">Копейки</label><select class="sel" id="st-cents" data-c="cents"><option value="auto"' + (S.settings.cents === 'auto' ? ' selected' : '') + '>Если есть</option><option value="always"' + (S.settings.cents === 'always' ? ' selected' : '') + '>Всегда</option></select></div></div>';
+}
+
+/* ---------- настройки ---------- */
+function scrSettings() {
+  let h = '<div class="top"><button class="ib" data-a="back" aria-label="Назад">' + ic('l') + '</button><div class="pagetitle">Настройки бюджета</div><span style="width:44px"></span></div>';
+  h += '<div class="sect" style="margin-top:6px"><h2>О вас</h2></div>' + profileHTML();
+  h += '<div class="sect"><h2>Поступления в месяц</h2></div>' + planHTML();
+  h += '<div class="sect"><h2>Деньги</h2></div><div class="card">' + moneyHTML() + '</div>';
+  h += '<div class="sect"><h2>Правила и категории</h2></div><div class="list"><button class="li" data-a="rules"><div class="sp"><div class="t">Правила распределения</div><div class="s">Суммы, проценты и приоритеты</div></div>' + ic('r').replace('<svg', '<svg width="20" height="20" style="stroke:var(--muted);fill:none;stroke-width:2"') + '</button><button class="li" data-a="wizard"><div class="sp"><div class="t">Пройти мастер настройки заново</div><div class="s">Ничего не удалится</div></div></button></div>';
+  h += catManage();
+  h += '<div class="sect"><h2>Данные</h2></div><div class="card stack"><p class="sm">Все данные хранятся только в этом браузере на этом устройстве. Между телефоном и компьютером они не синхронизируются. Если очистить данные сайта, они пропадут, поэтому иногда делайте резервную копию.</p>' +
+    '<button class="btn block" data-a="export">Создать резервную копию</button><div id="bk-w" hidden class="stack"><textarea class="ta code" id="bk" readonly aria-label="Резервная копия"></textarea><button class="btn soft block" data-a="copy">Скопировать копию</button><p class="xs muted">Вставьте скопированный текст в заметки или отправьте себе. Скачивание файла в этом окне недоступно.</p></div>' +
+    '<div class="hr"></div><label class="f" style="margin:0" for="imp">Восстановить из копии</label><textarea class="ta code" id="imp" placeholder="Вставьте текст копии сюда"></textarea><input type="file" id="imp-file" accept=".json,application/json,text/plain" data-c="impFile" aria-label="Выбрать файл копии"><div class="errt" id="imp-err"></div><button class="btn block" data-a="import">Проверить и восстановить</button></div>';
+  h += '<div class="sect"><h2>Демо и сброс</h2></div><div class="card stack"><p class="sm">Демо-данные заполнены примерами, которые не относятся к вам. Ваши настоящие данные сохранятся и вернутся при выходе из демо.</p>' + (S.settings.demo ? '<button class="btn block" data-a="demoOff">Вернуть мои данные</button>' : '<button class="btn block" data-a="demoOn">Загрузить демо-данные</button>') + '<button class="btn danger block" data-a="resetAll">Удалить все данные</button></div>';
+  return h;
+}
+
+/* ---------- мастер первоначальной настройки ---------- */
+const WSTEPS = ['', 'Категории', 'Платежи', 'Правила', 'Поступления'];
+function scrWizard() {
+  const st = ui.wiz;
+  const dots = st > 0 ? '<div class="dots">' + [1, 2, 3, 4].map((i) => '<i class="' + (i <= st ? 'on' : '') + '"></i>').join('') + '</div>' : '';
+  let h = '', nav = '';
+  if (st === 0) {
+    h = '<div style="padding-top:28px"><h1 class="num" style="font-size:32px;letter-spacing:-.03em">Давайте настроим бюджет</h1><p class="muted" style="margin:12px 0 18px;font-size:17px">Это займёт пару минут. Всё можно пропустить и изменить позже.</p>' +
+      '<div style="margin-bottom:14px">' + profileHTML() + '</div><div class="card stack"><div><b>1. Категории</b><div class="sm muted">Конверты, по которым делятся деньги.</div></div><div><b>2. Обязательные платежи</b><div class="sm muted">Кредиты, подписки, аренда. Суммы и даты ваши.</div></div><div><b>3. Правила</b><div class="sm muted">Как делить каждое поступление.</div></div><div><b>4. Поступления</b><div class="sm muted">Даты и суммы, когда вы получаете деньги.</div></div></div>' +
+      '<p class="xs muted" style="margin-top:14px">Данные хранятся только на этом устройстве, в этом браузере. Ничего не отправляется в интернет.</p></div>';
+    nav = '<button class="btn primary block" data-a="wizNext">Начать</button><button class="btn ghost block" data-a="wizSkipAll">Пропустить, настрою позже</button>';
+  } else {
+    h = dots + '<h1 class="num" style="font-size:26px;letter-spacing:-.02em;margin-bottom:6px">' + ['', 'Ваши категории', 'Обязательные платежи', 'Правила распределения', 'Поступления и остаток'][st] + '</h1>';
+    if (st === 1) h += '<p class="muted sm">Переименуйте, удалите или добавьте свои. Порядок можно менять стрелками.</p>' + catManage();
+    if (st === 2) {
+      h += '<p class="muted sm" style="margin-bottom:12px">Добавьте кредиты, рассрочки, подписки и другие регулярные платежи. Не знаете сумму? Пропустите, добавите позже.</p>';
+      h += S.bills.length ? '<div class="list">' + S.bills.map((b) => '<button class="li" data-a="billEdit" data-b="' + b.id + '"><div class="sp"><div class="t">' + esc(b.name) + '</div><div class="s">' + esc(catName(b.catId)) + ' · ' + fmtDate(b.date) + ' · ' + periodText(b) + '</div></div><div class="amt">' + fmt(b.amount) + '</div></button>').join('') + '</div>' : '<div class="card empty"><h3>Платежей пока нет</h3><p>Например: «iCloud 200 ГБ» в категории «Подписки».</p></div>';
+      h += '<button class="btn soft block" style="margin-top:12px" data-a="billNew">Добавить платёж</button>';
+    }
+    if (st === 3) {
+      h += '<p class="muted sm" style="margin-bottom:6px">Для платежей используются их даты и суммы. Для остальных категорий выберите способ пополнения. Приоритеты меняются в «Бюджет → Правила».</p><button class="btn ghost sm block" style="margin:8px 0" data-a="wizPreset">Подставить пример с процентами</button><p class="xs muted">Пример можно изменить в любой строке.</p>';
+      h += S.groups.map((g) => {
+        const cs = S.cats.filter((c) => c.groupId === g.id); if (!cs.length) return '';
+        return '<div class="gh"><h3>' + esc(g.name) + '</h3></div><div class="list" style="padding:2px 14px">' + cs.map((c) => { const t = c.rule.type; const pc = t === 'pctIncome' || t === 'pctRemainder'; return '<div style="padding:10px 0;border-top:1px solid var(--line)" class="pr"><div class="t">' + esc(c.name) + (S.bills.some((b) => b.catId === c.id) ? ' <span class="pill ok">платежи по датам</span>' : '') + '</div><div class="two" style="margin-top:6px"><select class="sel" data-c="wizType" data-id="' + c.id + '" aria-label="Способ пополнения ' + esc(c.name) + '">' + Object.keys(RTYPES).map((k) => '<option value="' + k + '"' + (t === k ? ' selected' : '') + '>' + RTYPES[k] + '</option>').join('') + '</select>' + (t === 'manual' ? '<span></span>' : '<input class="in" inputmode="decimal" data-i="wizVal" data-id="' + c.id + '" placeholder="' + (pc ? '%' : 'Сумма') + '" aria-label="Значение" value="' + (pc ? (c.rule.pct || '') : kopToInput(c.rule.amount)) + '">') + '</div></div>'; }).join('') + '</div>';
+      }).join('');
+    }
+    if (st === 4) h += '<p class="muted sm" style="margin-bottom:10px">Даты и суммы можно менять в любой момент. Плановая сумма не считается полученными деньгами.</p>' + planHTML() + '<div class="card" style="margin-top:12px">' + moneyHTML() + '</div>';
+    nav = '<button class="btn primary block" data-a="' + (st === 4 ? 'wizFinish' : 'wizNext') + '">' + (st === 4 ? 'Завершить настройку' : 'Далее') + '</button><div class="two"><button class="btn block" data-a="wizBack">Назад</button>' + (st < 4 ? '<button class="btn ghost block" data-a="wizNext">Пропустить шаг</button>' : '<button class="btn ghost block" data-a="wizFinish">Пропустить</button>') + '</div>';
+  }
+  return h + '<div class="stack" style="margin-top:22px">' + nav + '</div>';
+}
+const PRESET = { 'Продукты': 15, 'Дом и быт': 5, 'Транспорт': 5, 'Здоровье и аптека': 3, 'Кафе и доставка': 5, 'Одежда и покупки': 5, 'Красота и уход': 3, 'Хобби': 3, 'Развлечения и отдых': 5, 'Подарки': 2, 'Накопления': 10, 'Финансовая подушка': 5, 'Отпуск и крупные покупки': 3 };
+
+/* ---------- экраны ---------- */
+let lastScreen = null;
+function renderScreen(reset) {
+  const host = $('#page');
+  if (!ui.screen) { host.innerHTML = ''; lastScreen = null; document.body.style.overflow = ''; return; }
+  const old = $('#pg'); const top = old && lastScreen === ui.screen && !reset ? old.scrollTop : 0;
+  const inner = ({ settings: scrSettings, rules: scrRules, wizard: scrWizard })[ui.screen]();
+  host.innerHTML = '<div class="page" id="pg"><div class="in">' + inner + '</div></div>';
+  $('#pg').scrollTop = top; lastScreen = ui.screen; document.body.style.overflow = 'hidden';
+}
+function openScreen(n) { ui.screen = n; renderScreen(true); }
+
+/* ---------- категории: служебное ---------- */
+function openCatEdit(id) {
+  const c = L.cat(S, id); if (!c) return;
+  setSheet('<h2>Изменить категорию</h2><label class="f" for="f-name">Название</label><input class="in" id="f-name" maxlength="50" value="' + esc(c.name) + '" data-focus><label class="f" for="f-grp">Группа</label><select class="sel" id="f-grp">' + S.groups.map((g) => '<option value="' + g.id + '"' + (g.id === c.groupId ? ' selected' : '') + '>' + esc(g.name) + '</option>').join('') + '</select><div class="errt" id="f-err"></div><div class="foot"><button class="btn primary block" data-a="catSave" data-id="' + id + '">Сохранить</button><button class="btn danger block" data-a="catDel" data-id="' + id + '">Удалить категорию</button><button class="btn block" data-a="close">Отмена</button></div>');
+}
+function openCatNew(g) {
+  openSheet('<h2>Новая категория</h2><label class="f" for="f-name">Название</label><input class="in" id="f-name" maxlength="50" placeholder="Например: Питомцы" data-focus><div class="errt" id="f-err"></div><div class="foot"><button class="btn primary block" data-a="catSave" data-g="' + g + '" data-id="">Создать</button><button class="btn block" data-a="close">Отмена</button></div>');
+}
+function delCat(id) {
+  const c = L.cat(S, id); if (!c) return;
+  if (S.bills.some((b) => b.catId === id)) { toast('В категории есть платежи. Сначала перенесите или удалите их.'); return; }
+  const bal = L.env(S, id, ui.month).bal;
+  ask({ title: 'Удалить категорию «' + c.name + '»?', text: 'История расходов останется, но без категории.' + (bal > 0 ? ' Деньги в конверте (' + fmt(bal) + ') вернутся в свободные.' : ''), ok: 'Удалить', danger: true, onOk: () => { S.cats = S.cats.filter((x) => x.id !== id); commit(); toast('Категория удалена'); } });
+}
+function swapCat(id, dir) {
+  const c = L.cat(S, id), idxs = S.cats.map((x, i) => (x.groupId === c.groupId ? i : -1)).filter((i) => i >= 0);
+  const p = idxs.indexOf(S.cats.indexOf(c)), q = p + dir;
+  if (q < 0 || q >= idxs.length) return;
+  const a = idxs[p], b = idxs[q]; [S.cats[a], S.cats[b]] = [S.cats[b], S.cats[a]];
+  commit();
+}
+
+/* ---------- обработчики ---------- */
+let warnAck = false;
+let memStash = null;
+const A = {
+  tab: (d) => { ui.tab = d.t; render(false); },
+  mprev: () => shiftMonth(-1), mnext: () => shiftMonth(1),
+  close: () => closeSheet(),
+  askOk: () => { const f = okCb; closeSheet(); if (f) f(); },
+  settings: () => openScreen('settings'), rules: () => openScreen('rules'), wizard: () => { ui.wiz = 0; openScreen('wizard'); },
+  back: () => { ui.screen = null; render(); },
+  cat: (d) => openCat(d.id), catMode: (d) => { warnAck = false; openCat(d.id, d.mode); },
+  catDo: (d) => {
+    const err = (t) => { $('#f-err').textContent = t; };
+    const amount = L.parseMoney(val('f-amount')); if (!amount || amount <= 0) return err('Введите сумму больше нуля');
+    const m = ui.month, date = defaultDate();
+    if (d.mode !== 'top') {
+      const def = catDeficit(d.id, amount);
+      if (def > 0 && !warnAck) { warnAck = true; $('#f-save').textContent = 'Всё равно ' + (d.mode === 'move' ? 'перенести' : 'вернуть'); return err('Сначала проверьте предупреждение ниже.'); }
+    }
+    const r = d.mode === 'top' ? L.topUp(S, m, d.id, amount, date) : d.mode === 'move' ? L.move(S, m, d.id, val('f-to'), amount, date) : L.release(S, m, d.id, amount, date);
+    if (!r.ok) return err(r.error.replace(/(\d+)$/, (x) => fmt(+x)));
+    commit(); closeSheet(); toast(d.mode === 'top' ? 'Конверт пополнен' : d.mode === 'move' ? 'Деньги перенесены' : 'Деньги возвращены в свободные');
+  },
+  recv: (d) => openIncome({ slot: d.slot }), incExtra: (d) => openIncome({ only: 'extra', fromMenu: !!d.menu }), recvOnly: (d) => openIncome({ only: 'slot', fromMenu: !!d.menu }),
+  fabMenu: () => openSheet('<h2>Что добавить?</h2><div class="stack" style="margin-top:12px">' + [['expNew', 'Расход', 'Трата из категории: продукты, транспорт, кафе'], ['incExtra', 'Доход', 'Дополнительные деньги не по плану: подработка, подарок'], ['recvOnly', 'Поступление', 'Плановые деньги месяца: аванс, зарплата']].map((x) => '<button class="card" style="text-align:left;min-height:68px;width:100%" data-menu="1" data-a="' + x[0] + '"><div style="font-weight:600;font-size:18px">' + x[1] + '</div><div class="sm muted">' + x[2] + '</div></button>').join('') + '</div><div class="foot"><button class="btn block" data-a="close">Отмена</button></div>'),
+  qOpen: () => openQuick(true),
+  qMic: () => { if (listening) stopListen(); else startListen(); },
+  qSave: () => saveQuick(),
+  qMore: () => {
+    const a = L.parseMoney(val('q-amt')), c = val('q-cat'), title = qk.title, date = L.addDays(L.today(), qk.dateOff);
+    openExpense({ cat: c });
+    if (a) document.getElementById('f-amount').value = kopToInput(a);
+    document.getElementById('f-title').value = title;
+    document.getElementById('f-date').value = date.slice(8) + '.' + date.slice(5, 7) + '.' + date.slice(0, 4);
+    expInfo(null);
+  },
+  gender: (d) => { S.settings.gender = d.g; commit(); },
+  alloc: () => openAlloc({ month: ui.month }),
+  expNew: (d) => openExpense({ cat: d.cat, fromMenu: !!d.menu }),
+  pickCat: (d) => { expSel = d.id; document.querySelectorAll('#ov .chip[data-a="pickCat"]').forEach((e) => e.classList.toggle('on', e.dataset.id === d.id)); expInfo(editTx()); },
+  pickSlot: (d) => {
+    incSel = d.id; document.querySelectorAll('#ov .chip[data-a="pickSlot"]').forEach((e) => e.classList.toggle('on', e.dataset.id === d.id));
+    const x = L.slots(S, ui.month).find((s) => s.slot.id === d.id);
+    document.getElementById('f-amount').value = x && x.planned > 0 ? kopToInput(x.planned) : '';
+    document.getElementById('f-src').value = x ? x.slot.name : '';
+    document.getElementById('f-plan').textContent = x && x.planned > 0 ? 'План: ' + fmt(x.planned) + '. Измените сумму, если пришло другое.' : '';
+  },
+  expSave: (d) => saveExpense(d.id), incSave: (d) => saveIncome(d.id),
+  txOpen: (d) => { const t = S.txs.find((x) => x.id === d.id); if (t) (t.type === 'income' ? openIncome({ txId: t.id }) : openExpense({ txId: t.id })); },
+  txDel: (d) => {
+    const t = S.txs.find((x) => x.id === d.id); if (!t) return;
+    const n = S.allocs.filter((a) => a.incomeId === t.id).length;
+    ask({ title: t.type === 'income' ? 'Удалить доход?' : 'Удалить расход?', text: (t.type === 'income' ? 'Баланс уменьшится на ' + fmt(t.amount) + (n ? '. Распределение этого поступления тоже удалится.' : '.') : 'Сумма ' + fmt(t.amount) + ' вернётся в конверт и на баланс.' + (t.billId ? ' Платёж снова станет «ожидает оплаты».' : '')), ok: 'Удалить', danger: true, onOk: () => { L.deleteTx(S, t.id); commit(); toast('Удалено'); } });
+  },
+  agOpen: (d) => openAg(d.id),
+  agDel: (d) => { const g = L.allocGroups(S).find((x) => x.key === d.id); if (!g) return; ask({ title: 'Удалить запись?', text: 'Деньги вернутся туда, откуда были выделены. Баланс на руках не изменится.', ok: 'Удалить', danger: true, onOk: () => { L.deleteAllocGroup(S, g.items.map((a) => a.id)); commit(); toast('Запись удалена'); } }); },
+  hAll: () => { ui.fAll = !ui.fAll; render(false); }, hType: (d) => { ui.fType = d.t; render(); },
+  billNew: () => openBill(null), billEdit: (d) => openBill(d.b), billSave: (d) => saveBill(d.b, !!d.more),
+  billDel: (d) => { const b = S.bills.find((x) => x.id === d.b); ask({ title: 'Удалить платёж «' + b.name + '»?', text: 'Прошлые оплаты останутся в истории расходов.', ok: 'Удалить', danger: true, onOk: () => { S.bills = S.bills.filter((x) => x.id !== b.id); commit(); toast('Платёж удалён'); } }); },
+  pay: (d) => openPay(d.b, d.d), payOpen: (d) => openPay(d.b, d.d),
+  paySave: (d) => {
+    const amount = L.parseMoney(val('f-amount')), date = val('f-date'), b = S.bills.find((x) => x.id === d.b);
+    if (!amount || amount <= 0) return void ($('#f-err').textContent = 'Введите сумму больше нуля');
+    if (!L.validDate(date)) return void ($('#f-err').textContent = 'Укажите дату оплаты');
+    if (!L.payBill(S, b, d.d, amount, date)) return void ($('#f-err').textContent = 'Этот платёж уже оплачен');
+    commit(); closeSheet(); toast('Платёж оплачен');
+  },
+  paySkip: (d) => { const b = S.bills.find((x) => x.id === d.b); b.skipped = (b.skipped || []).concat(d.d); commit(); closeSheet(); toast('Платёж пропущен'); },
+  unskip: (d) => { const b = S.bills.find((x) => x.id === d.b); b.skipped = (b.skipped || []).filter((x) => x !== d.d); commit(); toast('Платёж возвращён в список'); },
+  unpay: (d) => { const t = S.txs.find((x) => x.billId === d.b && x.dueDate === d.d); if (t) ask({ title: 'Отменить оплату?', text: 'Расход ' + fmt(t.amount) + ' будет удалён, деньги вернутся в конверт.', ok: 'Отменить оплату', danger: true, onOk: () => { L.deleteTx(S, t.id); commit(); toast('Оплата отменена'); } }); },
+  ruleEdit: (d) => openRule(d.id),
+  ruleType: (d) => { ruleCollect(); rs.type = d.k; renderRuleSheet(); },
+  ruleSave: () => {
+    ruleCollect();
+    if ((rs.type === 'pctIncome' || rs.type === 'pctRemainder') && !(rs.pct > 0 && rs.pct <= 100)) return void ($('#f-err').textContent = 'Процент должен быть от 0 до 100');
+    if ((rs.type === 'fixedMonth' || rs.type === 'fixedEach') && !(rs.amount > 0)) return void ($('#f-err').textContent = 'Введите сумму больше нуля');
+    if (rs.max > 0 && rs.min > rs.max) return void ($('#f-err').textContent = 'Минимум не может быть больше максимума');
+    const c = L.cat(S, rs.id); c.rule = { type: rs.type, amount: rs.amount, pct: rs.pct, priority: rs.priority, min: rs.min, max: rs.max };
+    commit(); closeSheet(); toast('Правило сохранено');
+  },
+  pvConflict: (d) => { ui.pv.mode = d.mode; pvCompute(); }, pvRecalc: () => { ui.pv.mode = null; pvCompute(); }, pvApply,
+  catNew: (d) => openCatNew(d.g), catEdit: (d) => openCatEdit(d.id),
+  catSave: (d) => {
+    const name = val('f-name').trim(); if (!name) return void ($('#f-err').textContent = 'Введите название');
+    if (d.id) { const c = L.cat(S, d.id); c.name = name; if (val('f-grp') && val('f-grp') !== c.groupId) { c.groupId = val('f-grp'); } }
+    else { const g = L.group(S, d.g); S.cats.push(L.newCat(g.id, name, g.kind)); }
+    commit(); closeSheet(); toast('Сохранено');
+  },
+  catDel: (d) => { closeSheet(); delCat(d.id); }, catUp: (d) => swapCat(d.id, -1), catDn: (d) => swapCat(d.id, 1),
+  planAdd: () => { S.plan.push({ id: L.uid(), name: 'Поступление ' + (S.plan.length + 1), day: 1, amount: 0 }); commit(); },
+  planDel: (d) => { const p = S.plan.find((x) => x.id === d.id); ask({ title: 'Убрать «' + p.name + '»?', text: 'Уже полученные деньги останутся в истории.', ok: 'Убрать', danger: true, onOk: () => { S.plan = S.plan.filter((x) => x.id !== p.id); commit(); } }); },
+  export: () => {
+    const bk = $('#bk'); bk.value = JSON.stringify({ app: 'budget-planner', version: 1, exportedAt: new Date().toISOString(), data: S }, null, 1);
+    $('#bk-w').hidden = false; bk.focus(); bk.select();
+  },
+  copy: () => {
+    const bk = $('#bk'); bk.select();
+    const fb = () => { try { document.execCommand('copy'); toast('Скопировано'); } catch (e) { toast('Выделите текст и скопируйте вручную'); } };
+    try { navigator.clipboard.writeText(bk.value).then(() => toast('Скопировано'), fb); } catch (e) { fb(); }
+  },
+  import: () => {
+    const err = (t) => { $('#imp-err').textContent = t; };
+    let n = null;
+    try { const o = JSON.parse(val('imp')); n = L.normalize(o && o.data ? o.data : o); } catch (e) { return err('Не удалось прочитать текст. Вставьте копию целиком.'); }
+    if (!n) return err('Это не похоже на резервную копию бюджета.');
+    err('');
+    ask({ title: 'Заменить данные из копии?', text: 'В копии: ' + n.txs.length + ' ' + plural(n.txs.length, ['операция', 'операции', 'операций']) + ', ' + n.bills.length + ' ' + plural(n.bills.length, ['платёж', 'платежа', 'платежей']) + ', ' + n.cats.length + ' ' + plural(n.cats.length, ['категория', 'категории', 'категорий']) + '. Текущие данные будут заменены, дубликатов не появится.', ok: 'Восстановить', onOk: () => { S = n; ui.screen = null; commit(); toast('Данные восстановлены'); } });
+  },
+  demoOn: () => {
+    const go = () => {
+      if (!S.settings.demo) { const j = JSON.stringify(S); memStash = j; try { localStorage.setItem(STASH, j); } catch (e) { /* остаётся в памяти */ } }
+      S = L.demoState(); ui.screen = null; ui.month = L.monthOf(L.today()); commit(false); toast('Загружены демо-данные');
+    };
+    ask({ title: 'Загрузить демо-данные?', text: 'Ваши данные сохранятся и вернутся, когда вы выйдете из демо.', ok: 'Загрузить', onOk: go });
+  },
+  demoOff: () => {
+    let j = memStash; try { j = localStorage.getItem(STASH) || j; } catch (e) { /* пусто */ }
+    let n = null; try { n = j ? L.normalize(JSON.parse(j)) : null; } catch (e) { n = null; }
+    S = n || L.newState(); if (!n) S.settings.setupDone = false;
+    try { localStorage.removeItem(STASH); } catch (e) { /* пусто */ } memStash = null;
+    ui.screen = S.settings.setupDone ? null : 'wizard'; ui.wiz = 0; commit(false); toast('Ваши данные возвращены');
+  },
+  resetAll: () => ask({ title: 'Удалить все данные?', text: 'Операции, платежи, категории и правила исчезнут с этого устройства. Это нельзя отменить. Сначала сделайте резервную копию.', ok: 'Удалить всё', danger: true, onOk: () => { S = L.newState(); ui.wiz = 0; ui.screen = 'wizard'; ui.month = L.monthOf(L.today()); commit(false); } }),
+  wizNext: () => { ui.wiz = Math.min(4, ui.wiz + 1); renderScreen(true); }, wizBack: () => { ui.wiz = Math.max(0, ui.wiz - 1); renderScreen(true); },
+  wizSkipAll: () => { S.settings.setupDone = true; ui.screen = null; commit(false); toast('Настроите позже в разделе настроек'); },
+  wizFinish: () => { S.settings.setupDone = true; if (!S.txs.length) S.settings.trackFrom = L.monthOf(L.today()); ui.screen = null; ui.month = L.monthOf(L.today()); commit(false); toast('Настройка сохранена'); },
+  wizPreset: () => { S.cats.forEach((c) => { if (PRESET[c.name] && c.rule.type === 'manual') { c.rule.type = 'pctIncome'; c.rule.pct = PRESET[c.name]; } }); commit(); toast('Пример подставлен. Измените под себя'); },
+};
+const editTx = () => { const b = document.querySelector('#ov [data-a="expSave"]'); return b && b.dataset.id ? S.txs.find((t) => t.id === b.dataset.id) : null; };
+function catDeficit(id, amount) {
+  const pend = L.pendingSum(S, id, ui.month); if (pend <= 0) return 0;
+  const after = Math.max(0, L.env(S, id, ui.month).bal - amount);
+  return Math.max(0, pend - after);
+}
+const I = {
+  catAmt: (el) => {
+    warnAck = false; const sv = document.getElementById('f-save'); if (sv && el.dataset.mode !== 'top') sv.textContent = el.dataset.mode === 'move' ? 'Перенести' : 'Вернуть';
+    const w = document.getElementById('f-warn'); if (!w || el.dataset.mode === 'top') return;
+    const a = L.parseMoney(el.value) || 0, d = catDeficit(el.dataset.id, a);
+    w.innerHTML = d > 0 ? '<div class="banner bad"><div><b>Не хватит на платежи.</b> Эти деньги отложены на неоплаченные платежи категории. После операции не хватит ' + fmt(d) + '.</div></div>' : '';
+  },
+  expAmt: () => expInfo(editTx()),
+  qText: () => qUpdate(), qAmt: () => { qk.amtManual = true; qCheck(); },
+  pv: () => pvLive(),
+  catName: (el) => { const c = L.cat(S, el.dataset.id); if (c && el.value.trim()) { c.name = el.value.trim(); save(); } },
+  planName: (el) => { const p = S.plan.find((x) => x.id === el.dataset.id); if (p && el.value.trim()) { p.name = el.value.trim(); save(); } },
+  planDay: (el) => { const p = S.plan.find((x) => x.id === el.dataset.id), n = parseInt(el.value, 10); el.classList.toggle('err', !(n >= 1 && n <= 31)); if (p && n >= 1 && n <= 31) { p.day = n; if (p.dayTo && p.dayTo <= n) { p.dayTo = 0; const t = document.getElementById('pt-' + p.id); if (t) t.value = ''; } planHintUpd(p); save(); } },
+  planDayTo: (el) => { const p = S.plan.find((x) => x.id === el.dataset.id), raw = el.value.trim(), n = parseInt(raw, 10); if (raw === '') { el.classList.remove('err'); if (p) { p.dayTo = 0; planHintUpd(p); save(); } return; } const okv = n > p.day && n <= 31; el.classList.toggle('err', !okv); if (okv) { p.dayTo = n; planHintUpd(p); save(); } },
+  profName: (el) => { S.settings.name = el.value.trim().slice(0, 30); save(); },
+  dateMask: (el, e) => { const v = maskDate(el.value, e && e.inputType && e.inputType.indexOf('delete') === 0); if (v !== el.value) el.value = v; const pk = el.parentNode.querySelector('.calp'); if (pk) { const iso = readDate(el.value); pk.value = iso && iso !== 'invalid' ? iso : ''; } },
+  planAmt: (el) => { const p = S.plan.find((x) => x.id === el.dataset.id), v = el.value.trim() === '' ? 0 : L.parseMoney(el.value); el.classList.toggle('err', v === null); if (p && v !== null) { p.amount = v; save(); } },
+  startBal: (el) => { const v = el.value.trim() === '' ? 0 : L.parseMoney(el.value, true); el.classList.toggle('err', v === null); if (v !== null) { S.settings.startBalance = v; save(); } },
+  resPct: (el) => { const v = el.value.trim() === '' ? 0 : parseFloat(el.value.replace(',', '.')); el.classList.toggle('err', !(v >= 0 && v <= 100)); if (v >= 0 && v <= 100) { S.settings.reservePct = v; save(); } },
+  resFix: (el) => { const v = el.value.trim() === '' ? 0 : L.parseMoney(el.value); el.classList.toggle('err', v === null); if (v !== null) { S.settings.reserveFixed = v; save(); } },
+  wizVal: (el) => { const c = L.cat(S, el.dataset.id), pc = c.rule.type === 'pctIncome' || c.rule.type === 'pctRemainder'; if (pc) { const v = parseFloat(el.value.replace(',', '.')); c.rule.pct = v > 0 && v <= 100 ? v : 0; } else c.rule.amount = L.parseMoney(el.value) || 0; save(); },
+};
+const C = {
+  period: (el) => { document.getElementById('f-ivw').hidden = el.value !== 'custom'; },
+  hCat: (el) => { ui.fCat = el.value; render(); },
+  pvFresh: (el) => { ui.pv.fresh = el.checked; pvCompute(); },
+  cur: (el) => { S.settings.currency = el.value; commit(); },
+  cents: (el) => { S.settings.cents = el.value; commit(); },
+  datePick: (el) => { const t = document.getElementById(el.dataset.for); if (t && el.value) { t.value = el.value.slice(8) + '.' + el.value.slice(5, 7) + '.' + el.value.slice(0, 4); t.classList.remove('err'); } },
+  qCat: () => { qk.catManual = true; qCheck(); },
+  wizType: (el) => { const c = L.cat(S, el.dataset.id); c.rule.type = el.value; commit(); },
+  impFile: (el) => { const f = el.files && el.files[0]; if (!f) return; const r = new FileReader(); r.onload = () => { document.getElementById('imp').value = String(r.result || ''); }; r.readAsText(f); },
+};
+
+document.addEventListener('click', (e) => {
+  if (e.target.classList && e.target.classList.contains('ov')) { closeSheet(); return; }
+  if (e.target.classList && e.target.classList.contains('calp')) { try { if (e.target.showPicker) e.target.showPicker(); } catch (er) { /* нативный выбор откроется сам */ } return; }
+  const el = e.target.closest('[data-a]'); if (!el || el.disabled) return;
+  const fn = A[el.dataset.a]; if (fn) fn(el.dataset, el);
+});
+document.addEventListener('input', (e) => { const k = e.target.dataset && e.target.dataset.i; if (k && I[k]) I[k](e.target, e); });
+document.addEventListener('change', (e) => { const k = e.target.dataset && e.target.dataset.c; if (k && C[k]) C[k](e.target); });
+document.addEventListener('keydown', (e) => { if (e.key === 'Escape') closeSheet(); });
+
+try { if (navigator.storage && navigator.storage.persist) navigator.storage.persist(); } catch (e) { /* не критично */ }
+S = load();
+if (!S.settings.setupDone) { ui.screen = 'wizard'; ui.wiz = 0; }
+if (L.monthOf(L.today()) < S.settings.trackFrom) ui.month = S.settings.trackFrom;
+render();
+
+</script>
+<script>
+if ('serviceWorker' in navigator) { window.addEventListener('load', function () { navigator.serviceWorker.register('sw.js').catch(function () {}); }); }
+</script>
+</body>
+</html>
