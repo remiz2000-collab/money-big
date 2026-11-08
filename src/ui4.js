@@ -22,22 +22,23 @@ Object.assign(ICON, {
   c_plane: '<path d="M21 3.5L3.5 10.5l6.5 2.5 2.5 6.5z" fill="currentColor" fill-opacity=".18"/><path d="M10 13l11-9.5"/>',
   c_book: '<path d="M5.5 4.5h10.5a2 2 0 0 1 2 2v13H7.5a2 2 0 0 1-2-2z" fill="currentColor" fill-opacity=".18"/><path d="M5.5 17.5a2 2 0 0 1 2-2H18"/>',
   c_paw: '<ellipse cx="7" cy="10.5" rx="1.7" ry="2.1" fill="currentColor" fill-opacity=".18"/><ellipse cx="10.8" cy="6.8" rx="1.7" ry="2.1" fill="currentColor" fill-opacity=".18"/><ellipse cx="15.2" cy="6.8" rx="1.7" ry="2.1" fill="currentColor" fill-opacity=".18"/><ellipse cx="19" cy="10.5" rx="1.7" ry="2.1" fill="currentColor" fill-opacity=".18"/><path d="M8 17.2c0-2.6 1.8-4.7 4-4.7s4 2.1 4 4.7c0 1.7-1.8 1.8-4 1.2-2.2.6-4 .5-4-1.2z" fill="currentColor" fill-opacity=".18"/>',
-  c_tool: '<path d="M14.5 5.5a4 4 0 0 0 4.7 5.2l-8.7 8.7a2.1 2.1 0 0 1-3-3l8.7-8.7a4 4 0 0 0-1.7-2.2z" fill="currentColor" fill-opacity=".18"/>',
+  c_tool: '<path d="M15 4.5a4 4 0 0 0-3.6 5.4l-6.6 6.6a2 2 0 0 0 2.8 2.8l6.6-6.6a4 4 0 0 0 5.4-3.6l-2.7 2.7-2.6-.6-.6-2.6 2.7-2.7a4 4 0 0 0-1.4-.4z"/>',
   c_leaf: '<path d="M5 19C5 10 10 5 19.5 5 19.5 14 14.5 19 5 19z" fill="currentColor" fill-opacity=".18"/><path d="M5 19l8-8"/>',
   c_music: '<path d="M9 17.5V6.5l10-2v11" fill="currentColor" fill-opacity=".18"/><circle cx="6.8" cy="17.5" r="2.2" fill="currentColor" fill-opacity=".18"/><circle cx="16.8" cy="15.5" r="2.2" fill="currentColor" fill-opacity=".18"/>',
   c_film: '<path d="M4 6.5h16a1 1 0 0 1 1 1v9a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1v-9a1 1 0 0 1 1-1z" fill="currentColor" fill-opacity=".18"/><path d="M8 6.5v11M16 6.5v11M3 10.5h5M3 13.5h5M16 10.5h5M16 13.5h5"/>',
   c_cloud: '<path d="M7.5 18.5a4 4 0 0 1-.6-7.9A5.5 5.5 0 0 1 17.5 9a4.8 4.8 0 0 1-.5 9.5z" fill="currentColor" fill-opacity=".18"/>',
 });
 const ICON_KEYS = ['home', 'cart', 'car', 'health', 'cup', 'bag', 'sparkle', 'star', 'ticket', 'gift', 'coin', 'shield', 'phone', 'card', 'repeat', 'plane', 'book', 'paw', 'tool', 'leaf', 'music', 'film', 'cloud', 'wallet'];
-const ICON_TINT = { home: '#5B7545', wallet: '#5B7545', cart: '#C0703F', car: '#4F86A6', health: '#C2607A', cup: '#B5832A', bag: '#8B6AA8', sparkle: '#C2607A', star: '#C79A2E', ticket: '#8B6AA8', gift: '#C2607A', coin: '#B5832A', shield: '#3E8E85', phone: '#4F86A6', card: '#6C7A89', repeat: '#3E8E85', plane: '#4F86A6', book: '#8B6AA8', paw: '#C0703F', tool: '#6C7A89', leaf: '#5B7545', music: '#C2607A', film: '#8B6AA8', cloud: '#4F86A6' };
+const T_SAGE = '#B7CC9C', T_SAND = '#EBD497', T_CLAY = '#EBB397', T_SKY = '#A8CAD8', T_LAV = '#CBBEDF', T_ROSE = '#EBB4BE', T_TEAL = '#A6D2C6', T_STONE = '#D2CDBC';
+const ICON_TINT = { home: T_SAGE, wallet: T_SAGE, cart: T_CLAY, car: T_SKY, health: T_ROSE, cup: T_SAND, bag: T_LAV, sparkle: T_ROSE, star: T_SAND, ticket: T_LAV, gift: T_ROSE, coin: T_SAND, shield: T_TEAL, phone: T_SKY, card: T_STONE, repeat: T_TEAL, plane: T_SKY, book: T_LAV, paw: T_CLAY, tool: T_STONE, leaf: T_SAGE, music: T_ROSE, film: T_LAV, cloud: T_SKY };
 const DEFAULT_ICON = { 'Аренда и коммунальные услуги': 'home', 'Кредиты и рассрочки': 'card', 'Подписки': 'repeat', 'Телефон и интернет': 'phone', 'Страховки и регулярные платежи': 'shield', 'Продукты': 'cart', 'Дом и быт': 'tool', 'Транспорт': 'car', 'Здоровье и аптека': 'health', 'Кафе и доставка': 'cup', 'Одежда и покупки': 'bag', 'Красота и уход': 'sparkle', 'Хобби': 'star', 'Развлечения и отдых': 'ticket', 'Подарки': 'gift', 'Накопления': 'coin', 'Финансовая подушка': 'shield', 'Отпуск и крупные покупки': 'plane' };
 // v: '' — по умолчанию, 'none' — без значка, 'ic:ключ' — значок, 'data:image/…' — своя картинка, иначе эмодзи.
 function iconHTML(v, name, cls) {
   cls = 'ico ' + (cls || '');
   if (v === 'none') return '';
   if (!v && name && DEFAULT_ICON[name]) v = 'ic:' + DEFAULT_ICON[name];
-  if (typeof v === 'string' && v.indexOf('data:image/') === 0) return '<span class="' + cls + '"><img alt="" src="' + esc(v) + '"></span>';
-  if (typeof v === 'string' && v.indexOf('ic:') === 0 && ICON['c_' + v.slice(3)]) return '<span class="' + cls + '" style="--t:' + (ICON_TINT[v.slice(3)] || '#5B7545') + '"><svg viewBox="0 0 24 24" aria-hidden="true">' + ICON['c_' + v.slice(3)] + '</svg></span>';
+  if (typeof v === 'string' && v.indexOf('data:image/') === 0) return '<span class="' + cls + ' pic"><img alt="" src="' + esc(v) + '"></span>';
+  if (typeof v === 'string' && v.indexOf('ic:') === 0 && ICON['c_' + v.slice(3)]) return '<span class="' + cls + '" style="--t:' + (ICON_TINT[v.slice(3)] || T_SAGE) + '"><svg viewBox="0 0 24 24" aria-hidden="true">' + ICON['c_' + v.slice(3)] + '</svg></span>';
   if (v && typeof v === 'string' && v.indexOf('ic:') !== 0) return '<span class="' + cls + ' em" aria-hidden="true">' + esc(v) + '</span>';
   const l = String(name || '?').trim().charAt(0).toUpperCase();
   return '<span class="' + cls + ' ltr" aria-hidden="true">' + esc(l) + '</span>';
@@ -51,7 +52,7 @@ function iconPicker(t, cur, opts) {
     '<input class="in" id="ipk-' + t + '-e" maxlength="4" placeholder="Эмодзи" aria-label="Эмодзи вместо значка" data-i="icoEmoji" data-t="' + t + '" autocomplete="off">' +
     (opts.upload ? '<label class="btn sm" style="cursor:pointer">Картинка<input type="file" accept="image/*" hidden data-c="icoFile" data-t="' + t + '"></label>' : '') +
     '<button class="btn sm ghost" data-a="icoPick" data-t="' + t + '" data-v="">Сбросить</button><button class="btn sm ghost" data-a="icoPick" data-t="' + t + '" data-v="none">Без значка</button></div>' +
-    '<div class="ipk-grid">' + ICON_KEYS.map((k) => '<button type="button" style="--t:' + (ICON_TINT[k] || '#5B7545') + '" class="ipk-i' + (cur === 'ic:' + k ? ' on' : '') + '" data-a="icoPick" data-t="' + t + '" data-v="ic:' + k + '" aria-label="Значок ' + k + '"><svg viewBox="0 0 24 24" aria-hidden="true">' + ICON['c_' + k] + '</svg></button>').join('') + '</div></div>';
+    '<div class="ipk-grid">' + ICON_KEYS.map((k) => '<button type="button" style="--t:' + (ICON_TINT[k] || T_SAGE) + '" class="ipk-i' + (cur === 'ic:' + k ? ' on' : '') + '" data-a="icoPick" data-t="' + t + '" data-v="ic:' + k + '" aria-label="Значок ' + k + '"><svg viewBox="0 0 24 24" aria-hidden="true">' + ICON['c_' + k] + '</svg></button>').join('') + '</div></div>';
 }
 function icoSet(t, v, name) {
   icoState[t] = v;
