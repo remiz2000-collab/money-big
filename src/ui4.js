@@ -3,10 +3,10 @@
 /* ---------- значки (собственные линейные иконки + эмодзи + своя картинка) ---------- */
 Object.assign(ICON, {
   debt: '<path d="M4 8h14M14 4l4 4-4 4"/><path d="M20 16H6M10 12l-4 4 4 4"/>',
-  c_home: '<path d="M4 11.5L12 4l8 7.5V19a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1z" fill="currentColor" fill-opacity=".18"/><path d="M10 20v-5h4v5"/>',
+  c_home: '<path d="M3.5 11.5L12 4l8.5 7.5"/><path d="M5.5 10v9.5h13V10"/><path d="M10 19.5V14h4v5.5"/>',
   c_wallet: '<rect x="3.5" y="6" width="17" height="13" rx="3.5" fill="currentColor" fill-opacity=".18"/><path d="M3.5 10h17M16 14.5h1.5"/>',
-  c_cart: '<path d="M7 8h12.5l-1.8 6.5H8.6z" fill="currentColor" fill-opacity=".18"/><path d="M3.5 4.5h2l2.1 10h9.4"/><circle cx="9.5" cy="18.8" r="1.4"/><circle cx="16.5" cy="18.8" r="1.4"/>',
-  c_car: '<path d="M5 16v-4.2l1.7-4.3A1.5 1.5 0 0 1 8.1 6.5h7.8a1.5 1.5 0 0 1 1.4 1l1.7 4.3V16a1 1 0 0 1-1 1H6a1 1 0 0 1-1-1z" fill="currentColor" fill-opacity=".18"/><path d="M5 12h14M7 17v2M17 17v2"/><circle cx="8.5" cy="14.5" r=".7" fill="currentColor"/><circle cx="15.5" cy="14.5" r=".7" fill="currentColor"/>',
+  c_cart: '<path d="M3 4.5h2.4l2.2 10.5h10.2l2-8H6.3"/><circle cx="9.5" cy="19" r="1.5"/><circle cx="16.5" cy="19" r="1.5"/>',
+  c_car: '<path d="M3.5 17v-3.5A1.5 1.5 0 0 1 5 12h14a1.5 1.5 0 0 1 1.5 1.5V17z"/><path d="M6 12l1.7-4.5h8.6L18 12"/><circle cx="7.5" cy="17" r="1.9"/><circle cx="16.5" cy="17" r="1.9"/>',
   c_health: '<path d="M12 20s-7-4.4-7-10a4 4 0 0 1 7-2.5A4 4 0 0 1 19 10c0 5.6-7 10-7 10z" fill="currentColor" fill-opacity=".18"/><path d="M12 9.3v4.4M9.8 11.5h4.4"/>',
   c_cup: '<path d="M5.5 9h11v5a4.5 4.5 0 0 1-4.5 4.5h-2A4.5 4.5 0 0 1 5.5 14z" fill="currentColor" fill-opacity=".18"/><path d="M16.5 10.5h1.2a2.3 2.3 0 0 1 0 4.6h-1.4M9 3.5c0 1 1 1.2 1 2.2M13 3.5c0 1 1 1.2 1 2.2"/>',
   c_bag: '<path d="M5.5 8.5h13l-1 11h-11z" fill="currentColor" fill-opacity=".18"/><path d="M9 8.5V7a3 3 0 0 1 6 0v1.5"/>',
@@ -19,7 +19,7 @@ Object.assign(ICON, {
   c_phone: '<path d="M7.5 3.5h9a1 1 0 0 1 1 1v15a1 1 0 0 1-1 1h-9a1 1 0 0 1-1-1v-15a1 1 0 0 1 1-1z" fill="currentColor" fill-opacity=".18"/><path d="M10.5 18h3"/>',
   c_card: '<path d="M4.5 6h15a1.5 1.5 0 0 1 1.5 1.5v9a1.5 1.5 0 0 1-1.5 1.5h-15A1.5 1.5 0 0 1 3 16.5v-9A1.5 1.5 0 0 1 4.5 6z" fill="currentColor" fill-opacity=".18"/><path d="M3 10.2h18M6.5 15h3"/>',
   c_repeat: '<path d="M5 12a7 7 0 0 1 12-4.9L19 9M19 12a7 7 0 0 1-12 4.9L5 15"/><path d="M19 4.5V9h-4.5M5 19.5V15h4.5"/>',
-  c_plane: '<path d="M21 3.5L3.5 10.5l6.5 2.5 2.5 6.5z" fill="currentColor" fill-opacity=".18"/><path d="M10 13l11-9.5"/>',
+  c_plane: '<path d="M12 3c1 0 1.6 1 1.6 2v4.5l7 4v2l-7-2v4l2 1.5V20l-3.6-1-3.6 1v-1.5l2-1.5v-4l-7 2v-2l7-4V5c0-1 .6-2 1.6-2z"/>',
   c_book: '<path d="M5.5 4.5h10.5a2 2 0 0 1 2 2v13H7.5a2 2 0 0 1-2-2z" fill="currentColor" fill-opacity=".18"/><path d="M5.5 17.5a2 2 0 0 1 2-2H18"/>',
   c_paw: '<ellipse cx="7" cy="10.5" rx="1.7" ry="2.1" fill="currentColor" fill-opacity=".18"/><ellipse cx="10.8" cy="6.8" rx="1.7" ry="2.1" fill="currentColor" fill-opacity=".18"/><ellipse cx="15.2" cy="6.8" rx="1.7" ry="2.1" fill="currentColor" fill-opacity=".18"/><ellipse cx="19" cy="10.5" rx="1.7" ry="2.1" fill="currentColor" fill-opacity=".18"/><path d="M8 17.2c0-2.6 1.8-4.7 4-4.7s4 2.1 4 4.7c0 1.7-1.8 1.8-4 1.2-2.2.6-4 .5-4-1.2z" fill="currentColor" fill-opacity=".18"/>',
   c_tool: '<path d="M15 4.5a4 4 0 0 0-3.6 5.4l-6.6 6.6a2 2 0 0 0 2.8 2.8l6.6-6.6a4 4 0 0 0 5.4-3.6l-2.7 2.7-2.6-.6-.6-2.6 2.7-2.7a4 4 0 0 0-1.4-.4z"/>',

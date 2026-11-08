@@ -189,16 +189,15 @@ textarea.code{font-family:ui-monospace,Menlo,Consolas,monospace;font-size:12.5px
 .nav button{font-size:11.5px;padding:6px 0}
 .ico{flex:none;position:relative;width:38px;height:38px;display:inline-grid;place-items:center;font-size:18px;line-height:1;margin-right:10px;vertical-align:middle;color:#262A21;--t:#B7CC9C}
 .ico{isolation:isolate}
-.ico::before,.ico::after{content:'';position:absolute;inset:1px;background:var(--t);z-index:-1}
-.ico::before{border-radius:46% 54% 50% 50%/52% 46% 54% 48%;background:color-mix(in srgb,var(--t) 80%,#262A21);transform:translate(2px,2px) rotate(14deg)}
-.ico::after{border-radius:42% 58% 55% 45%/50% 45% 55% 50%;transform:rotate(-7deg)}
+.ico::before{content:'';position:absolute;inset:0;border-radius:12px;background:var(--t);z-index:-1}
 .ico svg{width:23px;height:23px;stroke:#262A21;fill:none;stroke-width:2.3;stroke-linecap:round;stroke-linejoin:round}
 .ico svg [fill-opacity]{fill:none}
 .ico.pic{width:38px;height:38px;border-radius:12px;overflow:hidden}
-.ico.pic::before,.ico.pic::after{display:none}
+.ico.pic::before{display:none}
 .ico img{width:100%;height:100%;object-fit:cover;display:block}
 .ico.ltr,.ico.em{font-weight:700;font-size:16px}
 .ico.big{width:48px;height:48px;font-size:25px}
+.ico.big::before{border-radius:15px}
 .ico.big svg{width:28px;height:28px}
 .ico.pic.big{border-radius:14px}
 .cat .row .ico{margin-right:10px}
