@@ -223,3 +223,7 @@ textarea.code{font-family:ui-monospace,Menlo,Consolas,monospace;font-size:12.5px
 .chk.on svg{stroke-width:3;stroke:var(--accent-ink)}
 @media (prefers-color-scheme: dark){:root:not([data-theme="light"]) .chk.on svg{stroke:#0E1409}}
 :root[data-theme="dark"] .chk.on svg{stroke:#0E1409}
+
+.grpchips{margin:0 0 4px;flex-wrap:nowrap;overflow-x:auto;padding:2px 2px 8px;scrollbar-width:none;position:sticky;top:0;z-index:5;background:var(--bg)}
+.grpchips::-webkit-scrollbar{display:none}
+.grpchips .chip{flex:none;white-space:nowrap}

@@ -2,7 +2,7 @@
 const KEY = 'budget.planner.v1', STASH = 'budget.planner.v1.stash';
 let persistOK = true;
 let S = null;
-const ui = { tab: 'home', month: L.monthOf(L.today()), fCat: '', fType: 'all', fAll: false, screen: null, wiz: 0, pv: null };
+const ui = { tab: 'home', month: L.monthOf(L.today()), fCat: '', fType: 'all', fAll: false, allBills: false, screen: null, wiz: 0, pv: null };
 const $ = (s, r) => (r || document).querySelector(s);
 const esc = (s) => String(s == null ? '' : s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const MONTHS = ['Январь', 'Февраль', 'Март', 'Апрель', 'Май', 'Июнь', 'Июль', 'Август', 'Сентябрь', 'Октябрь', 'Ноябрь', 'Декабрь'];
@@ -205,12 +205,13 @@ function viewHome() {
   const slots = L.slots(S, m);
   h += '<div class="sect"><h2>Поступления</h2><button class="link" data-a="settings">Настроить</button></div>';
   h += slots.length ? '<div class="list">' + slots.map(slotRow).join('') + '</div>' : '<div class="card empty"><h3>Поступления не настроены</h3><p>Укажите даты и суммы, когда вы получаете деньги.</p><button class="btn soft" data-a="settings">Настроить</button></div>';
-  const up = T.pending.slice(0, 4);
-  h += '<div class="sect"><h2>Ближайшие платежи</h2><button class="link" data-a="tab" data-t="pay">Все платежи</button></div>';
-  h += up.length ? '<div class="list">' + up.map((i) => billRow(i, {})).join('') + '</div>' : '<div class="card empty"><h3>Платежей к оплате нет</h3><p>' + (S.bills.length ? 'Всё оплачено или платежей в этом месяце нет.' : 'Добавьте кредиты, подписки и другие регулярные платежи.') + '</p>' + (S.bills.length ? '' : '<button class="btn soft" data-a="billNew">Добавить платёж</button>') + '</div>';
+  const up = ui.allBills ? T.pending : T.pending.slice(0, 4);
+  h += '<div class="sect"><h2>Ближайшие платежи</h2><button class="link" data-a="tab" data-t="pay">Вкладка платежей</button></div>';
+  h += up.length ? '<div class="list">' + up.map((i) => billRow(i, {})).join('') + '</div>' + (T.pending.length > 4 ? '<button class="btn soft block" style="margin-top:10px" data-a="billsAll">' + (ui.allBills ? 'Свернуть список' : 'Показать все платежи (' + T.pending.length + ')') + '</button>' : '') : '<div class="card empty"><h3>Платежей к оплате нет</h3><p>' + (S.bills.length ? 'Всё оплачено или платежей в этом месяце нет.' : 'Добавьте кредиты, подписки и другие регулярные платежи.') + '</p>' + (S.bills.length ? '' : '<button class="btn soft" data-a="billNew">Добавить платёж</button>') + '</div>';
   h += goalsHome(m);
   h += debtsHome();
   h += '<div class="sect"><h2>Категории</h2><button class="link" data-a="tab" data-t="budget">Бюджет</button></div>';
+  h += '<div class="chips grpchips">' + S.groups.filter((g) => S.cats.some((c) => c.groupId === g.id)).map((g) => '<button class="chip" data-a="grpGo" data-id="' + g.id + '">' + esc(g.name) + '</button>').join('') + '</div>';
   h += catGroups(m, false);
   return h;
 }
@@ -220,7 +221,7 @@ function catGroups(m, detailed) {
     const cs = S.cats.filter((c) => c.groupId === g.id);
     if (!cs.length && !detailed) return;
     const tot = cs.reduce((s, c) => s + L.env(S, c.id, m).bal, 0);
-    h += '<div class="gh"><h3>' + esc(g.name) + '</h3><span class="xs muted">осталось <span class="num">' + fmt(tot) + '</span></span></div><div class="list">';
+    h += '<div class="gh" id="grp-' + g.id + '" style="scroll-margin-top:76px"><h3>' + esc(g.name) + '</h3><span class="xs muted">осталось <span class="num">' + fmt(tot) + '</span></span></div><div class="list">';
     h += cs.length ? cs.map((c) => catRow(c, m, detailed)).join('') : '<div class="li muted sm">В этой группе пока нет категорий</div>';
     if (detailed) h += '<button class="li" style="color:var(--accent-deep);font-weight:500" data-a="catNew" data-g="' + g.id + '">' + ic('plus').replace('<svg', '<svg width="20" height="20" style="stroke:currentColor;fill:none;stroke-width:2"') + 'Добавить категорию</button>';
     h += '</div>';

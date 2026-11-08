@@ -252,6 +252,8 @@ let warnAck = false;
 let memStash = null;
 const A = {
   tab: (d) => { ui.tab = d.t; render(false); },
+  billsAll: () => { ui.allBills = !ui.allBills; render(); },
+  grpGo: (d) => { const e = document.getElementById('grp-' + d.id); if (e) e.scrollIntoView({ behavior: 'smooth', block: 'start' }); },
   mprev: () => shiftMonth(-1), mnext: () => shiftMonth(1),
   close: () => closeSheet(),
   askOk: () => { const f = okCb; closeSheet(); if (f) f(); },
