@@ -171,23 +171,30 @@ function goalPhotoHTML() {
     '<div class="two" style="margin-top:8px"><label class="btn soft" style="cursor:pointer;justify-content:center">' + (goalPhoto ? 'Заменить фото' : 'Добавить фото') + '<input type="file" accept="image/*" hidden data-c="goalFile"></label>' + (goalPhoto ? '<button class="btn ghost" data-a="goalPhotoDel">Убрать фото</button>' : '<span></span>') + '</div>';
 }
 function goalPhotoUpd() { const e = document.getElementById('g-photo'); if (e) e.innerHTML = goalPhotoHTML(); }
-function openGoal(id) {
-  const c = L.cat(S, id); if (!c) return;
+function openGoal(id, fromMenu) {
+  const isNew = !id;
+  const c = isNew ? { name: '', rule: { type: 'manual' }, goal: null } : L.cat(S, id); if (!c) return;
   const g = c.goal || { target: 0, date: '' };
   goalPhoto = g.photo || '';
-  setSheet('<h2>Цель: ' + esc(c.name) + '</h2><p class="muted sm" style="margin-top:4px">Например, отпуск или крупная покупка. Приложение посчитает, сколько откладывать каждый месяц.</p>' +
+  let catSel = '';
+  if (isNew) {
+    const free = S.cats.filter((x) => !x.goal), pref = free.find((x) => x.name === 'Отпуск и крупные покупки');
+    catSel = '<label class="f" for="g-cat">Где копить</label><select class="sel" id="g-cat" data-c="goalCat"><option value="__new">Новая категория с названием цели</option>' + S.groups.map((g) => '<optgroup label="' + esc(g.name) + '">' + S.cats.filter((x) => x.groupId === g.id).map((x) => '<option value="' + x.id + '"' + (pref && pref.id === x.id ? ' selected' : '') + (x.goal ? ' disabled' : '') + '>' + esc(x.name) + (x.goal ? ' (уже есть цель)' : '') + '</option>').join('') + '</optgroup>').join('') + '</select>';
+  }
+  setSheet('<h2>' + (isNew ? 'Новая цель' : 'Цель: ' + esc(c.name)) + '</h2><p class="muted sm" style="margin-top:4px">Например, отпуск или крупная покупка. Приложение посчитает, сколько откладывать каждый месяц.</p>' +
     '<div id="g-photo">' + goalPhotoHTML() + '</div>' +
-    '<label class="f" for="g-name">Название цели</label><input class="in" id="g-name" maxlength="40" placeholder="Например: Отпуск в Грузии" value="' + esc(g.name || '') + '">' +
+    '<label class="f" for="g-name">Название цели</label><input class="in" id="g-name" maxlength="40" placeholder="Например: Отпуск в Грузии" value="' + esc(g.name || '') + '" ' + (isNew ? 'data-focus' : '') + '>' + catSel +
     '<label class="f" for="g-target">Сколько нужно накопить</label><input class="in" id="g-target" inputmode="decimal" placeholder="0" value="' + kopToInput(g.target) + '" data-i="goalLive" data-focus>' +
     '<label class="f" for="g-date">К какой дате</label>' + dateField('g-date', g.date) +
     '<div id="g-prev" class="banner" style="margin-top:12px"><div></div></div>' +
     '<label class="li" style="padding:10px 0;gap:10px;margin-top:6px"><input type="checkbox" id="g-auto" style="width:22px;height:22px"' + (c.rule.type === 'goal' || !c.goal ? ' checked' : '') + '><span class="sp sm">Откладывать автоматически при распределении поступлений</span></label>' +
-    '<div class="errt" id="f-err"></div><div class="foot"><button class="btn primary block" data-a="goalSave" data-id="' + id + '">Сохранить цель</button>' + (c.goal ? '<button class="btn danger block" data-a="goalDel" data-id="' + id + '">Убрать цель</button>' : '') + '<button class="btn block" data-a="cat" data-id="' + id + '">Назад</button></div>');
+    '<div class="errt" id="f-err"></div><div class="foot"><button class="btn primary block" data-a="goalSave" data-id="' + (id || '') + '">Сохранить цель</button>' + (c.goal ? '<button class="btn danger block" data-a="goalDel" data-id="' + id + '">Убрать цель</button>' : '') + (isNew ? (fromMenu ? '<button class="btn block" data-a="fabMenu">Назад</button>' : '<button class="btn block" data-a="close">Отмена</button>') : '<button class="btn block" data-a="cat" data-id="' + id + '">Назад</button>') + '</div>');
   goalLive();
 }
 function goalLive() {
   const el = document.getElementById('g-prev'); if (!el) return;
-  const idEl = document.querySelector('#ov [data-a="goalSave"]'); const c = idEl && L.cat(S, idEl.dataset.id); if (!c) return;
+  const idEl = document.querySelector('#ov [data-a="goalSave"]'); if (!idEl) return;
+  const sel = document.getElementById('g-cat'), cid = idEl.dataset.id || (sel && sel.value !== '__new' ? sel.value : ''), c = { id: cid };
   const t = L.parseMoney(val('g-target')), d = val('g-date');
   let txt = 'Укажите сумму и дату.';
   if (t > 0 && d && d !== 'invalid' && L.validDate(d)) {
@@ -197,13 +204,25 @@ function goalLive() {
   el.firstChild.innerHTML = txt;
 }
 function saveGoal(id) {
-  const c = L.cat(S, id), err = (m) => { $('#f-err').textContent = m; };
+  const err = (m) => { $('#f-err').textContent = m; };
+  let c = id ? L.cat(S, id) : null, created = false;
+  if (!id) {
+    const sel = val('g-cat');
+    if (sel && sel !== '__new') c = L.cat(S, sel);
+    else {
+      const nm = val('g-name').trim(); if (!nm) return err('Введите название цели');
+      const g = S.groups.find((x) => x.kind === 'goals') || S.groups[0]; if (!g) return err('Нет группы для категории');
+      c = L.newCat(g.id, nm.slice(0, 50), 'goals'); created = true;
+    }
+    if (!c) return err('Выберите категорию');
+  }
   const t = L.parseMoney(val('g-target')), d = val('g-date');
   if (!(t > 0)) return err('Введите сумму больше нуля');
   if (!d || d === 'invalid' || !L.validDate(d)) return err('Укажите дату');
+  if (created) S.cats.push(c);
   c.goal = { target: t, date: d, name: val('g-name').trim().slice(0, 40), photo: goalPhoto || '' };
   if ($('#g-auto').checked) c.rule.type = 'goal'; else if (c.rule.type === 'goal') c.rule.type = 'manual';
-  commit(); openCat(id); toast('Цель сохранена');
+  commit(); if (id) openCat(id); else closeSheet(); toast('Цель сохранена');
 }
 
 /* ---------- долги ---------- */

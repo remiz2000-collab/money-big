@@ -1,0 +1,102 @@
+import asyncio, json, sys
+from playwright.async_api import async_playwright
+URL='file:///home/claude/budget/dist/test.html'
+async def main():
+    async with async_playwright() as p:
+        b=await p.chromium.launch()
+        ctx=await b.new_context(viewport={'width':390,'height':844},device_scale_factor=2,color_scheme='light')
+        pg=await ctx.new_page()
+        errs=[]
+        pg.on('pageerror',lambda e:errs.append(str(e)))
+        pg.on('console',lambda m: errs.append('console:'+m.text) if m.type=='error' else None)
+        await pg.goto(URL)
+        await pg.screenshot(path='shots/01_welcome.png')
+        await pg.click('[data-a=wizNext]')   # step1
+        await pg.screenshot(path='shots/02_cats.png')
+        await pg.click('[data-a=wizNext]')   # step2 bills
+        # add bill
+        await pg.click('#page [data-a=billNew]')
+        await pg.fill('#f-name','Аренда квартиры')
+        await pg.select_option('#f-cat',label='Аренда и коммунальные услуги')
+        await pg.fill('#f-amount','25000')
+        today=await pg.evaluate("L.today()")
+        ym=today[:7]
+        await pg.fill('#f-date',ym+'-20')
+        await pg.screenshot(path='shots/03_billform.png')
+        await pg.click('[data-a=billSave][data-more="1"]')
+        await pg.fill('#f-name','Кредит')
+        await pg.select_option('#f-cat',label='Кредиты и рассрочки')
+        await pg.fill('#f-amount','7 000,50')
+        await pg.fill('#f-date',ym+'-28')
+        await pg.click('.sheet [data-a=billSave]:not([data-more])')
+        await pg.screenshot(path='shots/04_bills_step.png')
+        await pg.click('[data-a=wizNext]')   # step3 rules
+        await pg.click('[data-a=wizPreset]')
+        await pg.screenshot(path='shots/05_rules_step.png',full_page=False)
+        await pg.click('[data-a=wizNext]')   # step4
+        amts=await pg.query_selector_all('[data-i=planAmt]')
+        for el,v in zip(amts,['60000','45000','35000']): await el.fill(v)
+        await pg.fill('#st-bal','1000')
+        await pg.screenshot(path='shots/06_plan_step.png')
+        await pg.click('[data-a=wizFinish]')
+        await pg.wait_for_selector('.hero')
+        await pg.screenshot(path='shots/07_home_empty.png')
+        # receive income
+        await pg.click('.quick [data-a=recv]')
+        await pg.screenshot(path='shots/08_receive.png')
+        await pg.click('[data-a=incSave]')
+        await pg.wait_for_selector('#pv-apply')
+        await pg.screenshot(path='shots/09_preview.png')
+        await pg.evaluate("document.querySelector('#ov .sheet').scrollTo(0,9999)")
+        await pg.screenshot(path='shots/09b_preview_bottom.png')
+        await pg.click('#pv-apply')
+        await pg.wait_for_selector('.hero')
+        await pg.screenshot(path='shots/10_home_after.png')
+        await pg.screenshot(path='shots/10b_home_full.png',full_page=True)
+        hero=await pg.inner_text('.hero')
+        print('HERO:',hero.replace('\n',' | '))
+        st=await pg.evaluate("JSON.stringify(L.totals(S,ui.month))")
+        t=json.loads(st); print({k:t[k] for k in ['cash','pos','unalloc','reserved','unfunded','safe']})
+        # expense
+        await pg.click('#fab')
+        await pg.fill('#f-amount','1500')
+        await pg.click('.chip:has-text("Продукты")')
+        await pg.screenshot(path='shots/11_expense.png')
+        await pg.click('[data-a=expSave]')
+        # budget tab
+        await pg.click('[data-a=tab][data-t=budget]')
+        await pg.screenshot(path='shots/12_budget.png',full_page=True)
+        await pg.click('[data-a=tab][data-t=pay]')
+        await pg.screenshot(path='shots/13_pay.png',full_page=True)
+        await pg.click('.chk >> nth=0')
+        await pg.screenshot(path='shots/14_paysheet.png')
+        await pg.click('[data-a=paySave]')
+        await pg.screenshot(path='shots/15_paid.png',full_page=True)
+        await pg.click('[data-a=tab][data-t=hist]')
+        await pg.screenshot(path='shots/16_hist.png',full_page=True)
+        # persistence
+        await pg.reload()
+        await pg.wait_for_selector('.hero')
+        h2=await pg.inner_text('.hero')
+        print('AFTER RELOAD:',h2.replace('\n',' | '))
+        # rules & settings
+        await pg.click('[data-a=tab][data-t=budget]')
+        await pg.click('.card [data-a=rules]')
+        await pg.screenshot(path='shots/17_rules.png',full_page=True)
+        await pg.click('[data-a=back]')
+        await pg.click('.top [data-a=settings]')
+        await pg.screenshot(path='shots/18_settings.png')
+        # overflow check
+        ov=await pg.evaluate("document.documentElement.scrollWidth > document.documentElement.clientWidth")
+        print('horizontal overflow:',ov)
+        print('ERRORS:',errs)
+        await ctx.close()
+        # dark
+        ctx=await b.new_context(viewport={'width':390,'height':844},device_scale_factor=2,color_scheme='dark')
+        pg=await ctx.new_page()
+        await pg.goto(URL)
+        await pg.click('[data-a=wizSkipAll]')
+        await pg.evaluate("S=L.demoState();commit(false)")
+        await pg.screenshot(path='shots/20_dark_demo.png',full_page=True)
+        await b.close()
+asyncio.run(main())

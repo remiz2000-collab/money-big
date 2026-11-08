@@ -271,7 +271,7 @@ const A = {
     commit(); closeSheet(); toast(d.mode === 'top' ? 'Конверт пополнен' : d.mode === 'move' ? 'Деньги перенесены' : 'Деньги возвращены в свободные');
   },
   recv: (d) => openIncome({ slot: d.slot }), incExtra: (d) => openIncome({ only: 'extra', fromMenu: !!d.menu }), recvOnly: (d) => openIncome({ only: 'slot', fromMenu: !!d.menu }),
-  fabMenu: () => openSheet('<h2>Что добавить?</h2><div class="stack" style="margin-top:12px">' + [['expNew', 'Расход', 'Трата из категории: продукты, транспорт, кафе'], ['incExtra', 'Доход', 'Дополнительные деньги не по плану: подработка, подарок'], ['recvOnly', 'Поступление', 'Плановые деньги месяца: аванс, зарплата'], ['billNew', 'Платёж', 'Регулярный или разовый платёж: кредит, подписка, аренда']].map((x) => '<button class="card" style="text-align:left;min-height:68px;width:100%" data-menu="1" data-a="' + x[0] + '"><div style="font-weight:600;font-size:18px">' + x[1] + '</div><div class="sm muted">' + x[2] + '</div></button>').join('') + '</div><div class="foot"><button class="btn block" data-a="close">Отмена</button></div>'),
+  fabMenu: () => openSheet('<h2>Что добавить?</h2><div class="stack" style="margin-top:12px">' + [['expNew', 'Расход', 'Трата из категории: продукты, транспорт, кафе'], ['incExtra', 'Доход', 'Дополнительные деньги не по плану: подработка, подарок'], ['recvOnly', 'Поступление', 'Плановые деньги месяца: аванс, зарплата'], ['billNew', 'Платёж', 'Регулярный или разовый платёж: кредит, подписка, аренда'], ['goalNew', 'Цель', 'Накопить к дате: отпуск, крупная покупка']].map((x) => '<button class="card" style="text-align:left;min-height:68px;width:100%" data-menu="1" data-a="' + x[0] + '"><div style="font-weight:600;font-size:18px">' + x[1] + '</div><div class="sm muted">' + x[2] + '</div></button>').join('') + '</div><div class="foot"><button class="btn block" data-a="close">Отмена</button></div>'),
   qOpen: () => openQuick(true),
   qMic: () => { if (listening) stopListen(); else startListen(); },
   qSave: () => saveQuick(),
@@ -290,7 +290,7 @@ const A = {
   debtDir: (d, el) => { document.getElementById('d-dir').value = d.v; el.parentNode.querySelectorAll('button').forEach((b) => b.classList.toggle('on', b === el)); },
   debtPayDel: (d) => { const x = S.debts.find((q) => q.id === d.id); if (x) { x.paid.splice(+d.i, 1); commit(); openDebt(d.id); } },
   debtDel: (d) => { const x = S.debts.find((q) => q.id === d.id); ask({ title: 'Удалить долг?', text: esc(x ? x.who : '') + ' · ' + fmt(x ? x.amount : 0), ok: 'Удалить', danger: true, onOk: () => { S.debts = S.debts.filter((q) => q.id !== d.id); commit(); toast('Долг удалён'); } }); },
-  goalOpen: (d) => openGoal(d.id), goalPhotoDel: () => { goalPhoto = ''; goalPhotoUpd(); }, goalSave: (d) => saveGoal(d.id),
+  goalOpen: (d) => openGoal(d.id), goalNew: (d) => openGoal(null, !!d.menu), goalPhotoDel: () => { goalPhoto = ''; goalPhotoUpd(); }, goalSave: (d) => saveGoal(d.id),
   goalDel: (d) => { const c = L.cat(S, d.id); c.goal = null; if (c.rule.type === 'goal') c.rule.type = 'manual'; commit(); openCat(d.id); toast('Цель убрана'); },
   icoPick: (d) => { const nm = (document.getElementById('f-name') || {}).value; icoSet(d.t, d.v, nm); const e = document.getElementById('ipk-' + d.t + '-e'); if (e) e.value = ''; },
   fxRefresh: async (d) => { const ok = await refreshRates(false); if (ok && d.p) fxChanged(d.p); else if (ok) render(); },
@@ -432,6 +432,7 @@ const C = {
   cents: (el) => { S.settings.cents = el.value; commit(); },
   datePick: (el) => { const t = document.getElementById(el.dataset.for); if (t && el.value) { t.value = el.value.slice(8) + '.' + el.value.slice(5, 7) + '.' + el.value.slice(0, 4); t.classList.remove('err'); if (document.getElementById('g-prev')) goalLive(); } },
   qCat: () => { qk.catManual = true; qCheck(); },
+  goalCat: () => goalLive(),
   fxCur: (el) => { const p = el.id.split('-')[0]; if (p === 'q') qk.curManual = true; fxChanged(p); },
   goalFile: (el) => { const f = el.files && el.files[0]; if (!f) return; resizeImage(f, (u) => { if (u) { goalPhoto = u; goalPhotoUpd(); } else toast('Не удалось прочитать фото'); }, 720, 400); },
   icoFile: (el) => { const f = el.files && el.files[0]; if (!f) return; resizeImage(f, (u) => { if (u) icoSet(el.dataset.t, u, (document.getElementById('f-name') || {}).value); else toast('Не удалось прочитать картинку'); }); },
@@ -445,7 +446,7 @@ document.addEventListener('click', (e) => {
   const el = e.target.closest('[data-a]'); if (!el || el.disabled) return;
   const fn = A[el.dataset.a]; if (fn) fn(el.dataset, el);
 });
-document.addEventListener('input', (e) => { const k = e.target.dataset && e.target.dataset.i; if (k && I[k]) I[k](e.target, e); });
+document.addEventListener('input', (e) => { if (e.target.matches && e.target.matches('input[inputmode="decimal"]') && moneyField(e.target)) groupInput(e.target); const k = e.target.dataset && e.target.dataset.i; if (k && I[k]) I[k](e.target, e); });
 document.addEventListener('change', (e) => { const k = e.target.dataset && e.target.dataset.c; if (k && C[k]) C[k](e.target); });
 document.addEventListener('keydown', (e) => { if (e.key === 'Escape') closeSheet(); });
 

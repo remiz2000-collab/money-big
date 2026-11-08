@@ -880,7 +880,31 @@ function fmt(k, o) {
   if (o && o.sign && k > 0) s = '+' + s;
   return s;
 }
-const kopToInput = (k) => (k === 0 ? '' : k % 100 === 0 ? String(k / 100) : (k / 100).toFixed(2).replace('.', ','));
+const groupDigits = (d) => d.replace(/\B(?=(\d{3})+(?!\d))/g, '\u00a0');
+const kopToInput = (k) => (k === 0 ? '' : (k < 0 ? '-' : '') + groupDigits(String(Math.floor(Math.abs(k) / 100))) + (k % 100 === 0 ? '' : ',' + String(Math.abs(k) % 100).padStart(2, '0')));
+// Поля сумм: тысячи разделяются пробелами при вводе (100 000, а не 100000). Проценты и курсы не трогаем.
+function moneyField(el) {
+  const i = el.dataset.i;
+  if (i === 'resPct' || i === 'fxRate') return false;
+  if (el.id === 'r-val' && typeof rs !== 'undefined' && rs && (rs.type === 'pctIncome' || rs.type === 'pctRemainder')) return false;
+  if (i === 'wizVal' && el.getAttribute('placeholder') === '%') return false;
+  return true;
+}
+function groupInput(el) {
+  const raw = el.value;
+  if (!/^-?[\d\s\u00a0\u202f]*([.,]\d*)?$/.test(raw)) return;
+  const caret = el.selectionStart == null ? raw.length : el.selectionStart;
+  const keep = raw.slice(0, caret).replace(/[\s\u00a0\u202f]/g, '').length;
+  const clean = raw.replace(/[\s\u00a0\u202f]/g, '');
+  const neg = clean[0] === '-' ? '-' : '', body = neg ? clean.slice(1) : clean;
+  const m = /^(\d*)([.,]?)(\d*)/.exec(body);
+  const out = neg + groupDigits(m[1]) + m[2] + m[3].slice(0, 2);
+  if (out === raw) return;
+  el.value = out;
+  let n = 0, pos = 0;
+  while (pos < out.length && n < keep) { if (!/[\s\u00a0\u202f]/.test(out[pos])) n++; pos++; }
+  try { el.setSelectionRange(pos, pos); } catch (e) { /* не критично */ }
+}
 
 /* ---------- мелкие хелперы интерфейса ---------- */
 let toastT = null;
@@ -1535,23 +1559,30 @@ function goalPhotoHTML() {
     '<div class="two" style="margin-top:8px"><label class="btn soft" style="cursor:pointer;justify-content:center">' + (goalPhoto ? 'Заменить фото' : 'Добавить фото') + '<input type="file" accept="image/*" hidden data-c="goalFile"></label>' + (goalPhoto ? '<button class="btn ghost" data-a="goalPhotoDel">Убрать фото</button>' : '<span></span>') + '</div>';
 }
 function goalPhotoUpd() { const e = document.getElementById('g-photo'); if (e) e.innerHTML = goalPhotoHTML(); }
-function openGoal(id) {
-  const c = L.cat(S, id); if (!c) return;
+function openGoal(id, fromMenu) {
+  const isNew = !id;
+  const c = isNew ? { name: '', rule: { type: 'manual' }, goal: null } : L.cat(S, id); if (!c) return;
   const g = c.goal || { target: 0, date: '' };
   goalPhoto = g.photo || '';
-  setSheet('<h2>Цель: ' + esc(c.name) + '</h2><p class="muted sm" style="margin-top:4px">Например, отпуск или крупная покупка. Приложение посчитает, сколько откладывать каждый месяц.</p>' +
+  let catSel = '';
+  if (isNew) {
+    const free = S.cats.filter((x) => !x.goal), pref = free.find((x) => x.name === 'Отпуск и крупные покупки');
+    catSel = '<label class="f" for="g-cat">Где копить</label><select class="sel" id="g-cat" data-c="goalCat"><option value="__new">Новая категория с названием цели</option>' + S.groups.map((g) => '<optgroup label="' + esc(g.name) + '">' + S.cats.filter((x) => x.groupId === g.id).map((x) => '<option value="' + x.id + '"' + (pref && pref.id === x.id ? ' selected' : '') + (x.goal ? ' disabled' : '') + '>' + esc(x.name) + (x.goal ? ' (уже есть цель)' : '') + '</option>').join('') + '</optgroup>').join('') + '</select>';
+  }
+  setSheet('<h2>' + (isNew ? 'Новая цель' : 'Цель: ' + esc(c.name)) + '</h2><p class="muted sm" style="margin-top:4px">Например, отпуск или крупная покупка. Приложение посчитает, сколько откладывать каждый месяц.</p>' +
     '<div id="g-photo">' + goalPhotoHTML() + '</div>' +
-    '<label class="f" for="g-name">Название цели</label><input class="in" id="g-name" maxlength="40" placeholder="Например: Отпуск в Грузии" value="' + esc(g.name || '') + '">' +
+    '<label class="f" for="g-name">Название цели</label><input class="in" id="g-name" maxlength="40" placeholder="Например: Отпуск в Грузии" value="' + esc(g.name || '') + '" ' + (isNew ? 'data-focus' : '') + '>' + catSel +
     '<label class="f" for="g-target">Сколько нужно накопить</label><input class="in" id="g-target" inputmode="decimal" placeholder="0" value="' + kopToInput(g.target) + '" data-i="goalLive" data-focus>' +
     '<label class="f" for="g-date">К какой дате</label>' + dateField('g-date', g.date) +
     '<div id="g-prev" class="banner" style="margin-top:12px"><div></div></div>' +
     '<label class="li" style="padding:10px 0;gap:10px;margin-top:6px"><input type="checkbox" id="g-auto" style="width:22px;height:22px"' + (c.rule.type === 'goal' || !c.goal ? ' checked' : '') + '><span class="sp sm">Откладывать автоматически при распределении поступлений</span></label>' +
-    '<div class="errt" id="f-err"></div><div class="foot"><button class="btn primary block" data-a="goalSave" data-id="' + id + '">Сохранить цель</button>' + (c.goal ? '<button class="btn danger block" data-a="goalDel" data-id="' + id + '">Убрать цель</button>' : '') + '<button class="btn block" data-a="cat" data-id="' + id + '">Назад</button></div>');
+    '<div class="errt" id="f-err"></div><div class="foot"><button class="btn primary block" data-a="goalSave" data-id="' + (id || '') + '">Сохранить цель</button>' + (c.goal ? '<button class="btn danger block" data-a="goalDel" data-id="' + id + '">Убрать цель</button>' : '') + (isNew ? (fromMenu ? '<button class="btn block" data-a="fabMenu">Назад</button>' : '<button class="btn block" data-a="close">Отмена</button>') : '<button class="btn block" data-a="cat" data-id="' + id + '">Назад</button>') + '</div>');
   goalLive();
 }
 function goalLive() {
   const el = document.getElementById('g-prev'); if (!el) return;
-  const idEl = document.querySelector('#ov [data-a="goalSave"]'); const c = idEl && L.cat(S, idEl.dataset.id); if (!c) return;
+  const idEl = document.querySelector('#ov [data-a="goalSave"]'); if (!idEl) return;
+  const sel = document.getElementById('g-cat'), cid = idEl.dataset.id || (sel && sel.value !== '__new' ? sel.value : ''), c = { id: cid };
   const t = L.parseMoney(val('g-target')), d = val('g-date');
   let txt = 'Укажите сумму и дату.';
   if (t > 0 && d && d !== 'invalid' && L.validDate(d)) {
@@ -1561,13 +1592,25 @@ function goalLive() {
   el.firstChild.innerHTML = txt;
 }
 function saveGoal(id) {
-  const c = L.cat(S, id), err = (m) => { $('#f-err').textContent = m; };
+  const err = (m) => { $('#f-err').textContent = m; };
+  let c = id ? L.cat(S, id) : null, created = false;
+  if (!id) {
+    const sel = val('g-cat');
+    if (sel && sel !== '__new') c = L.cat(S, sel);
+    else {
+      const nm = val('g-name').trim(); if (!nm) return err('Введите название цели');
+      const g = S.groups.find((x) => x.kind === 'goals') || S.groups[0]; if (!g) return err('Нет группы для категории');
+      c = L.newCat(g.id, nm.slice(0, 50), 'goals'); created = true;
+    }
+    if (!c) return err('Выберите категорию');
+  }
   const t = L.parseMoney(val('g-target')), d = val('g-date');
   if (!(t > 0)) return err('Введите сумму больше нуля');
   if (!d || d === 'invalid' || !L.validDate(d)) return err('Укажите дату');
+  if (created) S.cats.push(c);
   c.goal = { target: t, date: d, name: val('g-name').trim().slice(0, 40), photo: goalPhoto || '' };
   if ($('#g-auto').checked) c.rule.type = 'goal'; else if (c.rule.type === 'goal') c.rule.type = 'manual';
-  commit(); openCat(id); toast('Цель сохранена');
+  commit(); if (id) openCat(id); else closeSheet(); toast('Цель сохранена');
 }
 
 /* ---------- долги ---------- */
@@ -1920,7 +1963,7 @@ const A = {
     commit(); closeSheet(); toast(d.mode === 'top' ? 'Конверт пополнен' : d.mode === 'move' ? 'Деньги перенесены' : 'Деньги возвращены в свободные');
   },
   recv: (d) => openIncome({ slot: d.slot }), incExtra: (d) => openIncome({ only: 'extra', fromMenu: !!d.menu }), recvOnly: (d) => openIncome({ only: 'slot', fromMenu: !!d.menu }),
-  fabMenu: () => openSheet('<h2>Что добавить?</h2><div class="stack" style="margin-top:12px">' + [['expNew', 'Расход', 'Трата из категории: продукты, транспорт, кафе'], ['incExtra', 'Доход', 'Дополнительные деньги не по плану: подработка, подарок'], ['recvOnly', 'Поступление', 'Плановые деньги месяца: аванс, зарплата'], ['billNew', 'Платёж', 'Регулярный или разовый платёж: кредит, подписка, аренда']].map((x) => '<button class="card" style="text-align:left;min-height:68px;width:100%" data-menu="1" data-a="' + x[0] + '"><div style="font-weight:600;font-size:18px">' + x[1] + '</div><div class="sm muted">' + x[2] + '</div></button>').join('') + '</div><div class="foot"><button class="btn block" data-a="close">Отмена</button></div>'),
+  fabMenu: () => openSheet('<h2>Что добавить?</h2><div class="stack" style="margin-top:12px">' + [['expNew', 'Расход', 'Трата из категории: продукты, транспорт, кафе'], ['incExtra', 'Доход', 'Дополнительные деньги не по плану: подработка, подарок'], ['recvOnly', 'Поступление', 'Плановые деньги месяца: аванс, зарплата'], ['billNew', 'Платёж', 'Регулярный или разовый платёж: кредит, подписка, аренда'], ['goalNew', 'Цель', 'Накопить к дате: отпуск, крупная покупка']].map((x) => '<button class="card" style="text-align:left;min-height:68px;width:100%" data-menu="1" data-a="' + x[0] + '"><div style="font-weight:600;font-size:18px">' + x[1] + '</div><div class="sm muted">' + x[2] + '</div></button>').join('') + '</div><div class="foot"><button class="btn block" data-a="close">Отмена</button></div>'),
   qOpen: () => openQuick(true),
   qMic: () => { if (listening) stopListen(); else startListen(); },
   qSave: () => saveQuick(),
@@ -1939,7 +1982,7 @@ const A = {
   debtDir: (d, el) => { document.getElementById('d-dir').value = d.v; el.parentNode.querySelectorAll('button').forEach((b) => b.classList.toggle('on', b === el)); },
   debtPayDel: (d) => { const x = S.debts.find((q) => q.id === d.id); if (x) { x.paid.splice(+d.i, 1); commit(); openDebt(d.id); } },
   debtDel: (d) => { const x = S.debts.find((q) => q.id === d.id); ask({ title: 'Удалить долг?', text: esc(x ? x.who : '') + ' · ' + fmt(x ? x.amount : 0), ok: 'Удалить', danger: true, onOk: () => { S.debts = S.debts.filter((q) => q.id !== d.id); commit(); toast('Долг удалён'); } }); },
-  goalOpen: (d) => openGoal(d.id), goalPhotoDel: () => { goalPhoto = ''; goalPhotoUpd(); }, goalSave: (d) => saveGoal(d.id),
+  goalOpen: (d) => openGoal(d.id), goalNew: (d) => openGoal(null, !!d.menu), goalPhotoDel: () => { goalPhoto = ''; goalPhotoUpd(); }, goalSave: (d) => saveGoal(d.id),
   goalDel: (d) => { const c = L.cat(S, d.id); c.goal = null; if (c.rule.type === 'goal') c.rule.type = 'manual'; commit(); openCat(d.id); toast('Цель убрана'); },
   icoPick: (d) => { const nm = (document.getElementById('f-name') || {}).value; icoSet(d.t, d.v, nm); const e = document.getElementById('ipk-' + d.t + '-e'); if (e) e.value = ''; },
   fxRefresh: async (d) => { const ok = await refreshRates(false); if (ok && d.p) fxChanged(d.p); else if (ok) render(); },
@@ -2081,6 +2124,7 @@ const C = {
   cents: (el) => { S.settings.cents = el.value; commit(); },
   datePick: (el) => { const t = document.getElementById(el.dataset.for); if (t && el.value) { t.value = el.value.slice(8) + '.' + el.value.slice(5, 7) + '.' + el.value.slice(0, 4); t.classList.remove('err'); if (document.getElementById('g-prev')) goalLive(); } },
   qCat: () => { qk.catManual = true; qCheck(); },
+  goalCat: () => goalLive(),
   fxCur: (el) => { const p = el.id.split('-')[0]; if (p === 'q') qk.curManual = true; fxChanged(p); },
   goalFile: (el) => { const f = el.files && el.files[0]; if (!f) return; resizeImage(f, (u) => { if (u) { goalPhoto = u; goalPhotoUpd(); } else toast('Не удалось прочитать фото'); }, 720, 400); },
   icoFile: (el) => { const f = el.files && el.files[0]; if (!f) return; resizeImage(f, (u) => { if (u) icoSet(el.dataset.t, u, (document.getElementById('f-name') || {}).value); else toast('Не удалось прочитать картинку'); }); },
@@ -2094,7 +2138,7 @@ document.addEventListener('click', (e) => {
   const el = e.target.closest('[data-a]'); if (!el || el.disabled) return;
   const fn = A[el.dataset.a]; if (fn) fn(el.dataset, el);
 });
-document.addEventListener('input', (e) => { const k = e.target.dataset && e.target.dataset.i; if (k && I[k]) I[k](e.target, e); });
+document.addEventListener('input', (e) => { if (e.target.matches && e.target.matches('input[inputmode="decimal"]') && moneyField(e.target)) groupInput(e.target); const k = e.target.dataset && e.target.dataset.i; if (k && I[k]) I[k](e.target, e); });
 document.addEventListener('change', (e) => { const k = e.target.dataset && e.target.dataset.c; if (k && C[k]) C[k](e.target); });
 document.addEventListener('keydown', (e) => { if (e.key === 'Escape') closeSheet(); });
 

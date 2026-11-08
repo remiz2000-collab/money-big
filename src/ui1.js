@@ -55,7 +55,31 @@ function fmt(k, o) {
   if (o && o.sign && k > 0) s = '+' + s;
   return s;
 }
-const kopToInput = (k) => (k === 0 ? '' : k % 100 === 0 ? String(k / 100) : (k / 100).toFixed(2).replace('.', ','));
+const groupDigits = (d) => d.replace(/\B(?=(\d{3})+(?!\d))/g, '\u00a0');
+const kopToInput = (k) => (k === 0 ? '' : (k < 0 ? '-' : '') + groupDigits(String(Math.floor(Math.abs(k) / 100))) + (k % 100 === 0 ? '' : ',' + String(Math.abs(k) % 100).padStart(2, '0')));
+// Поля сумм: тысячи разделяются пробелами при вводе (100 000, а не 100000). Проценты и курсы не трогаем.
+function moneyField(el) {
+  const i = el.dataset.i;
+  if (i === 'resPct' || i === 'fxRate') return false;
+  if (el.id === 'r-val' && typeof rs !== 'undefined' && rs && (rs.type === 'pctIncome' || rs.type === 'pctRemainder')) return false;
+  if (i === 'wizVal' && el.getAttribute('placeholder') === '%') return false;
+  return true;
+}
+function groupInput(el) {
+  const raw = el.value;
+  if (!/^-?[\d\s\u00a0\u202f]*([.,]\d*)?$/.test(raw)) return;
+  const caret = el.selectionStart == null ? raw.length : el.selectionStart;
+  const keep = raw.slice(0, caret).replace(/[\s\u00a0\u202f]/g, '').length;
+  const clean = raw.replace(/[\s\u00a0\u202f]/g, '');
+  const neg = clean[0] === '-' ? '-' : '', body = neg ? clean.slice(1) : clean;
+  const m = /^(\d*)([.,]?)(\d*)/.exec(body);
+  const out = neg + groupDigits(m[1]) + m[2] + m[3].slice(0, 2);
+  if (out === raw) return;
+  el.value = out;
+  let n = 0, pos = 0;
+  while (pos < out.length && n < keep) { if (!/[\s\u00a0\u202f]/.test(out[pos])) n++; pos++; }
+  try { el.setSelectionRange(pos, pos); } catch (e) { /* не критично */ }
+}
 
 /* ---------- мелкие хелперы интерфейса ---------- */
 let toastT = null;
