@@ -30,7 +30,7 @@ Object.assign(ICON, {
 });
 const ICON_KEYS = ['home', 'cart', 'car', 'health', 'cup', 'bag', 'sparkle', 'star', 'ticket', 'gift', 'coin', 'shield', 'phone', 'card', 'repeat', 'plane', 'book', 'paw', 'tool', 'leaf', 'music', 'film', 'cloud', 'wallet'];
 const T_SAGE = '#B7CC9C', T_SAND = '#EBD497', T_CLAY = '#EBB397', T_SKY = '#A8CAD8', T_LAV = '#CBBEDF', T_ROSE = '#EBB4BE', T_TEAL = '#A6D2C6', T_STONE = '#D2CDBC';
-const ICON_TINT = { home: T_SAGE, wallet: T_SAGE, cart: T_CLAY, car: T_SKY, health: T_ROSE, cup: T_SAND, bag: T_LAV, sparkle: T_ROSE, star: T_SAND, ticket: T_LAV, gift: T_ROSE, coin: T_SAND, shield: T_TEAL, phone: T_SKY, card: T_STONE, repeat: T_TEAL, plane: T_SKY, book: T_LAV, paw: T_CLAY, tool: T_STONE, leaf: T_SAGE, music: T_ROSE, film: T_LAV, cloud: T_SKY };
+const ICON_TINT = {}; // все значки одного оливкового цвета
 const DEFAULT_ICON = { 'Аренда и коммунальные услуги': 'home', 'Кредиты и рассрочки': 'card', 'Подписки': 'repeat', 'Телефон и интернет': 'phone', 'Страховки и регулярные платежи': 'shield', 'Продукты': 'cart', 'Дом и быт': 'tool', 'Транспорт': 'car', 'Здоровье и аптека': 'health', 'Кафе и доставка': 'cup', 'Одежда и покупки': 'bag', 'Красота и уход': 'sparkle', 'Хобби': 'star', 'Развлечения и отдых': 'ticket', 'Подарки': 'gift', 'Накопления': 'coin', 'Финансовая подушка': 'shield', 'Отпуск и крупные покупки': 'plane' };
 // v: '' — по умолчанию, 'none' — без значка, 'ic:ключ' — значок, 'data:image/…' — своя картинка, иначе эмодзи.
 function iconHTML(v, name, cls) {
