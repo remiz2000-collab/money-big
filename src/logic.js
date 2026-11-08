@@ -89,7 +89,7 @@ const L = {};
     S.settings = Object.assign({}, base.settings, S.settings || {});
     const int = (x) => (Number.isFinite(x) ? Math.round(x) : 0);
     S.settings.startBalance = int(S.settings.startBalance);
-    S.cats.forEach((c) => { c.rule = Object.assign(L.newRule('personal'), c.rule || {}); c.name = String(c.name || 'Категория'); c.icon = typeof c.icon === 'string' ? c.icon : ''; if (c.goal && !(c.goal.target > 0 && L.validDate(c.goal.date))) c.goal = null; if (c.goal) c.goal.target = int(c.goal.target); });
+    S.cats.forEach((c) => { c.rule = Object.assign(L.newRule('personal'), c.rule || {}); c.name = String(c.name || 'Категория'); c.icon = typeof c.icon === 'string' ? c.icon : ''; if (c.goal && !(c.goal.target > 0 && L.validDate(c.goal.date))) c.goal = null; if (c.goal) { c.goal.target = int(c.goal.target); c.goal.name = typeof c.goal.name === 'string' ? c.goal.name : ''; c.goal.photo = typeof c.goal.photo === 'string' && c.goal.photo.indexOf('data:image/') === 0 ? c.goal.photo : ''; } });
     S.bills.forEach((b) => { b.span = b.span > 0 ? Math.min(366, b.span | 0) : 0; b.amount = int(b.amount); b.skipped = Array.isArray(b.skipped) ? b.skipped : []; b.period = b.period || 'month'; b.icon = typeof b.icon === 'string' ? b.icon : ''; });
     S.plan.forEach((p) => { p.amount = int(p.amount); p.dayTo = p.dayTo > p.day ? p.dayTo | 0 : 0; });
     S.txs.forEach((t) => { t.amount = int(t.amount); });

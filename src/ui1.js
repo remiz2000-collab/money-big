@@ -179,12 +179,13 @@ function viewHome() {
   h += '<div class="grid2"><div class="stat"><div class="l">Получено за месяц</div><div class="v">' + fmt(T.incomeM) + '</div></div><div class="stat"><div class="l">Потрачено</div><div class="v">' + fmt(T.spentM) + '</div></div><div class="stat"><div class="l">Отложено под платежи</div><div class="v">' + fmt(T.reserved) + '</div><div class="xs muted">к оплате ' + fmt(pendSum) + '</div></div><div class="stat"><div class="l">Можно распределить</div><div class="v ' + (T.unalloc < 0 ? 'neg' : '') + '">' + fmt(T.unalloc) + '</div></div></div>';
   h += '</div>';
   const slots = L.slots(S, m);
-  if (S.debts.length) { const D = L.debtTotals(S); if (D.owe + D.owed > 0) h += '<button class="banner" style="margin-top:12px;width:100%;text-align:left" data-a="tab" data-t="debts"><div>Долги: ' + (D.owe ? gv('я должна', 'я должен', 'я должен(на)') + ' <b>' + fmt(D.owe) + '</b>' : '') + (D.owe && D.owed ? ' · ' : '') + (D.owed ? 'мне должны <b>' + fmt(D.owed) + '</b>' : '') + '</div></button>'; }
   h += '<div class="sect"><h2>Поступления</h2><button class="link" data-a="settings">Настроить</button></div>';
   h += slots.length ? '<div class="list">' + slots.map(slotRow).join('') + '</div>' : '<div class="card empty"><h3>Поступления не настроены</h3><p>Укажите даты и суммы, когда вы получаете деньги.</p><button class="btn soft" data-a="settings">Настроить</button></div>';
   const up = T.pending.slice(0, 4);
   h += '<div class="sect"><h2>Ближайшие платежи</h2><button class="link" data-a="tab" data-t="pay">Все платежи</button></div>';
   h += up.length ? '<div class="list">' + up.map((i) => billRow(i, {})).join('') + '</div>' : '<div class="card empty"><h3>Платежей к оплате нет</h3><p>' + (S.bills.length ? 'Всё оплачено или платежей в этом месяце нет.' : 'Добавьте кредиты, подписки и другие регулярные платежи.') + '</p>' + (S.bills.length ? '' : '<button class="btn soft" data-a="billNew">Добавить платёж</button>') + '</div>';
+  h += goalsHome(m);
+  h += debtsHome();
   h += '<div class="sect"><h2>Категории</h2><button class="link" data-a="tab" data-t="budget">Бюджет</button></div>';
   h += catGroups(m, false);
   return h;
