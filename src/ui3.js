@@ -317,7 +317,13 @@ const A = {
   hAll: () => { ui.fAll = !ui.fAll; render(false); }, hType: (d) => { ui.fType = d.t; render(); },
   billNew: (d) => openBill(null, d && d.menu ? { fromMenu: true } : undefined), billEdit: (d) => openBill(d.b), billSave: (d) => saveBill(d.b, !!d.more),
   billDel: (d) => { const b = S.bills.find((x) => x.id === d.b); ask({ title: 'Удалить платёж «' + b.name + '»?', text: 'Прошлые оплаты останутся в истории расходов.', ok: 'Удалить', danger: true, onOk: () => { S.bills = S.bills.filter((x) => x.id !== b.id); commit(); toast('Платёж удалён'); } }); },
-  pay: (d) => openPay(d.b, d.d), payOpen: (d) => openPay(d.b, d.d),
+  pay: (d) => {
+    const b = S.bills.find((x) => x.id === d.b); if (!b) return;
+    const it = L.billItems(S, ui.month).find((i) => i.bill.id === d.b && i.due === d.d);
+    const amount = it ? it.amount : b.amount;
+    if (!L.payBill(S, b, d.d, amount, L.today())) return void toast('Этот платёж уже оплачен');
+    commit(); toast('Оплачено: ' + b.name + ' · ' + fmt(amount));
+  }, payOpen: (d) => openPay(d.b, d.d),
   paySave: (d) => {
     const amount = L.parseMoney(val('f-amount')), date = val('f-date'), b = S.bills.find((x) => x.id === d.b);
     if (!amount || amount <= 0) return void ($('#f-err').textContent = 'Введите сумму больше нуля');
