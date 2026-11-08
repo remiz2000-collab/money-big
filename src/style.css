@@ -200,7 +200,7 @@ textarea.code{font-family:ui-monospace,Menlo,Consolas,monospace;font-size:12.5px
 .ico.big::before{border-radius:15px}
 .ico.big svg{width:28px;height:28px}
 .ico.pic.big{border-radius:14px}
-.cat .row .ico{margin-right:10px}
+.cat .row .ico{margin-right:0}
 .li > .ico{margin-right:0}
 .ipk{margin-top:4px}.ipk-top{display:flex;align-items:center;gap:8px;flex-wrap:wrap}.ipk-top .in{width:92px;min-height:44px}
 .ipk-grid{display:grid;grid-template-columns:repeat(6,1fr);gap:6px;margin-top:10px}

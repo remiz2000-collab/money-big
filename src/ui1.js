@@ -147,7 +147,7 @@ function catRow(c, m, detailed) {
   } else {
     body = '<div class="mini"><span>План <b>' + (p > 0 ? fmt(p) : '—') + '</b></span><span>Выделено <b>' + fmt(e.avail) + '</b></span><span>Потрачено <b>' + fmt(e.spent) + '</b></span></div>';
   }
-  return '<button class="cat" data-a="cat" data-id="' + c.id + '"><div class="row">' + catIcon(c) + '<div class="nm sp">' + esc(c.name) + '</div>' + badge + '<div class="amt ' + (e.bal < 0 ? 'neg' : '') + '">' + fmt(e.bal) + '</div></div>' + body + '<div class="prog ' + cls + '"><i style="width:' + Math.min(100, Math.round(pct * 100)) + '%"></i></div>' + goalLine(c, m) + '</button>';
+  return '<button class="cat" data-a="cat" data-id="' + c.id + '"><div class="row">' + catIcon(c) + '<div class="nm sp">' + esc(c.name) + (badge ? '<div style="margin-top:4px">' + badge + '</div>' : '') + '</div><div class="amt ' + (e.bal < 0 ? 'neg' : '') + '">' + fmt(e.bal) + '</div></div>' + body + '<div class="prog ' + cls + '"><i style="width:' + Math.min(100, Math.round(pct * 100)) + '%"></i></div>' + goalLine(c, m) + '</button>';
 }
 function billRow(it, opts) {
   opts = opts || {};
@@ -162,7 +162,7 @@ function billRow(it, opts) {
   }
   const act = it.paid ? 'unpay' : it.skipped ? 'unskip' : 'pay';
   return '<div class="li" style="gap:10px">' + (opts.check ? '<button class="chk ' + (it.paid ? 'on' : '') + '" data-a="' + act + '" data-b="' + it.bill.id + '" data-d="' + it.due + '" aria-label="' + (it.paid ? 'Отменить оплату' : it.skipped ? 'Вернуть платёж' : 'Отметить оплаченным') + '">' + ic('ok') + '</button>' : '') +
-    (opts.check ? iconHTML(it.bill.icon, it.bill.name) : '') + '<button class="sp" style="text-align:left;min-width:0" data-a="' + (opts.check ? 'billEdit' : 'payOpen') + '" data-b="' + it.bill.id + '" data-d="' + it.due + '"><div class="t">' + esc(it.bill.name) + '</div><div class="s">' + spanText(it.due, it.dueEnd) + ' · ' + esc(cat) + '</div><div style="margin-top:4px">' + badge + '</div></button><div class="amt">' + fmt(it.amount) + '</div></div>';
+    '<button class="sp" style="text-align:left;min-width:0" data-a="' + (opts.check ? 'billEdit' : 'payOpen') + '" data-b="' + it.bill.id + '" data-d="' + it.due + '"><div class="t">' + esc(it.bill.name) + '</div><div class="s">' + spanText(it.due, it.dueEnd) + ' · ' + esc(cat) + '</div><div style="margin-top:4px">' + badge + '</div></button><div class="amt">' + fmt(it.amount) + '</div></div>';
 }
 function viewHome() {
   const m = ui.month, T = L.totals(S, m), isNow = m === L.monthOf(L.today());
