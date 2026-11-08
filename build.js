@@ -32,6 +32,7 @@ ${body}
 ${logic}
 ${r('ui1.js')}
 ${r('ui2.js')}
+${r('ui4.js')}
 ${r('ui3.js')}
 </script>
 <script>

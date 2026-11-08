@@ -1,0 +1,464 @@
+{
+ "v": 1,
+ "settings": {
+  "name": "Тест",
+  "gender": "f",
+  "currency": "RUB",
+  "cents": "auto",
+  "startBalance": 0,
+  "trackFrom": "2026-10",
+  "reservePct": 0,
+  "reserveFixed": 0,
+  "setupDone": true,
+  "demo": true
+ },
+ "groups": [
+  {
+   "id": "g_oblig",
+   "name": "Обязательства",
+   "kind": "oblig"
+  },
+  {
+   "id": "g_daily",
+   "name": "Повседневная жизнь",
+   "kind": "daily"
+  },
+  {
+   "id": "g_personal",
+   "name": "Личные расходы",
+   "kind": "personal"
+  },
+  {
+   "id": "g_goals",
+   "name": "Накопления и цели",
+   "kind": "goals"
+  }
+ ],
+ "cats": [
+  {
+   "id": "iyplykbxvhy3",
+   "groupId": "g_oblig",
+   "name": "Аренда и коммунальные услуги",
+   "rule": {
+    "type": "manual",
+    "amount": 0,
+    "pct": 0,
+    "priority": 1,
+    "min": 0,
+    "max": 0
+   }
+  },
+  {
+   "id": "ibzqu3hmvhy3",
+   "groupId": "g_oblig",
+   "name": "Кредиты и рассрочки",
+   "rule": {
+    "type": "manual",
+    "amount": 0,
+    "pct": 0,
+    "priority": 1,
+    "min": 0,
+    "max": 0
+   }
+  },
+  {
+   "id": "il30nir4vhy3",
+   "groupId": "g_oblig",
+   "name": "Подписки",
+   "rule": {
+    "type": "manual",
+    "amount": 0,
+    "pct": 0,
+    "priority": 1,
+    "min": 0,
+    "max": 0
+   }
+  },
+  {
+   "id": "i6goob3kvhy3",
+   "groupId": "g_oblig",
+   "name": "Телефон и интернет",
+   "rule": {
+    "type": "manual",
+    "amount": 0,
+    "pct": 0,
+    "priority": 1,
+    "min": 0,
+    "max": 0
+   }
+  },
+  {
+   "id": "i0exeke9vhy3",
+   "groupId": "g_oblig",
+   "name": "Страховки и регулярные платежи",
+   "rule": {
+    "type": "manual",
+    "amount": 0,
+    "pct": 0,
+    "priority": 1,
+    "min": 0,
+    "max": 0
+   }
+  },
+  {
+   "id": "ihk05vu9vhy3",
+   "groupId": "g_daily",
+   "name": "Продукты",
+   "rule": {
+    "type": "fixedMonth",
+    "amount": 1800000,
+    "pct": 0,
+    "priority": 2,
+    "min": 0,
+    "max": 0
+   }
+  },
+  {
+   "id": "i15ug257vhy3",
+   "groupId": "g_daily",
+   "name": "Дом и быт",
+   "rule": {
+    "type": "manual",
+    "amount": 0,
+    "pct": 0,
+    "priority": 2,
+    "min": 0,
+    "max": 0
+   }
+  },
+  {
+   "id": "ih15ih28vhy3",
+   "groupId": "g_daily",
+   "name": "Транспорт",
+   "rule": {
+    "type": "fixedMonth",
+    "amount": 300000,
+    "pct": 0,
+    "priority": 2,
+    "min": 0,
+    "max": 0
+   }
+  },
+  {
+   "id": "i1mn70navhy3",
+   "groupId": "g_daily",
+   "name": "Здоровье и аптека",
+   "rule": {
+    "type": "fixedMonth",
+    "amount": 200000,
+    "pct": 0,
+    "priority": 2,
+    "min": 0,
+    "max": 0
+   }
+  },
+  {
+   "id": "ipmwxejyvhy3",
+   "groupId": "g_daily",
+   "name": "Кафе и доставка",
+   "rule": {
+    "type": "pctRemainder",
+    "amount": 0,
+    "pct": 10,
+    "priority": 2,
+    "min": 0,
+    "max": 0
+   }
+  },
+  {
+   "id": "i4xn4sewvhy3",
+   "groupId": "g_personal",
+   "name": "Одежда и покупки",
+   "rule": {
+    "type": "manual",
+    "amount": 0,
+    "pct": 0,
+    "priority": 4,
+    "min": 0,
+    "max": 0
+   }
+  },
+  {
+   "id": "iswv3j2bvhy3",
+   "groupId": "g_personal",
+   "name": "Красота и уход",
+   "rule": {
+    "type": "pctRemainder",
+    "amount": 0,
+    "pct": 8,
+    "priority": 4,
+    "min": 0,
+    "max": 0
+   }
+  },
+  {
+   "id": "igke4vvgvhy3",
+   "groupId": "g_personal",
+   "name": "Хобби",
+   "rule": {
+    "type": "manual",
+    "amount": 0,
+    "pct": 0,
+    "priority": 4,
+    "min": 0,
+    "max": 0
+   }
+  },
+  {
+   "id": "ixh6kx0yvhy3",
+   "groupId": "g_personal",
+   "name": "Развлечения и отдых",
+   "rule": {
+    "type": "pctRemainder",
+    "amount": 0,
+    "pct": 8,
+    "priority": 4,
+    "min": 0,
+    "max": 0
+   }
+  },
+  {
+   "id": "iypailztvhy3",
+   "groupId": "g_personal",
+   "name": "Подарки",
+   "rule": {
+    "type": "manual",
+    "amount": 0,
+    "pct": 0,
+    "priority": 4,
+    "min": 0,
+    "max": 0
+   }
+  },
+  {
+   "id": "ih005uxxvhy3",
+   "groupId": "g_goals",
+   "name": "Накопления",
+   "rule": {
+    "type": "pctIncome",
+    "amount": 0,
+    "pct": 10,
+    "priority": 3,
+    "min": 0,
+    "max": 0
+   }
+  },
+  {
+   "id": "iegss8zevhy3",
+   "groupId": "g_goals",
+   "name": "Финансовая подушка",
+   "rule": {
+    "type": "pctIncome",
+    "amount": 0,
+    "pct": 5,
+    "priority": 3,
+    "min": 0,
+    "max": 0
+   }
+  },
+  {
+   "id": "i3ixjqu9vhy3",
+   "groupId": "g_goals",
+   "name": "Отпуск и крупные покупки",
+   "rule": {
+    "type": "manual",
+    "amount": 0,
+    "pct": 0,
+    "priority": 3,
+    "min": 0,
+    "max": 0
+   }
+  }
+ ],
+ "bills": [
+  {
+   "id": "ib695cq7vhy3",
+   "name": "Пример: аренда",
+   "catId": "iyplykbxvhy3",
+   "amount": 2800000,
+   "date": "2026-10-05",
+   "period": "month",
+   "interval": 0,
+   "endDate": "",
+   "note": "",
+   "skipped": [],
+   "span": 5
+  },
+  {
+   "id": "i9wy29v0vhy4",
+   "name": "Пример: рассрочка",
+   "catId": "ibzqu3hmvhy3",
+   "amount": 700000,
+   "date": "2026-10-10",
+   "period": "month",
+   "interval": 0,
+   "endDate": "",
+   "note": "",
+   "skipped": []
+  },
+  {
+   "id": "i7gm1hhlvhy4",
+   "name": "Пример: музыка и кино",
+   "catId": "il30nir4vhy3",
+   "amount": 69900,
+   "date": "2026-10-20",
+   "period": "month",
+   "interval": 0,
+   "endDate": "",
+   "note": "",
+   "skipped": []
+  },
+  {
+   "id": "itk2yix2vhy4",
+   "name": "Пример: интернет",
+   "catId": "i6goob3kvhy3",
+   "amount": 90000,
+   "date": "2026-10-12",
+   "period": "month",
+   "interval": 0,
+   "endDate": "",
+   "note": "",
+   "skipped": []
+  }
+ ],
+ "plan": [
+  {
+   "id": "ibjawc6jvhy3",
+   "name": "Пример: аванс",
+   "day": 1,
+   "amount": 6000000,
+   "dayTo": 3
+  },
+  {
+   "id": "i0hnje1ivhy3",
+   "name": "Пример: зарплата",
+   "day": 15,
+   "amount": 4500000
+  },
+  {
+   "id": "ilo1lkl9vhy3",
+   "name": "Пример: подработка",
+   "day": 25,
+   "amount": 3000000
+  }
+ ],
+ "txs": [
+  {
+   "id": "i26q9291vhy4",
+   "type": "income",
+   "kind": "plan",
+   "date": "2026-10-01",
+   "amount": 6000000,
+   "source": "Пример: аванс",
+   "slotId": "ibjawc6jvhy3",
+   "slotMonth": "2026-10",
+   "planned": 6000000
+  },
+  {
+   "id": "inywc47zvhy6",
+   "type": "expense",
+   "date": "2026-10-02",
+   "amount": 184050,
+   "catId": "ihk05vu9vhy3",
+   "title": "Пример: супермаркет",
+   "method": ""
+  },
+  {
+   "id": "ilelm75qvhy6",
+   "type": "expense",
+   "date": "2026-10-03",
+   "amount": 45000,
+   "catId": "ih15ih28vhy3",
+   "title": "Пример: проезд",
+   "method": ""
+  },
+  {
+   "id": "inhy29davhy6",
+   "type": "expense",
+   "date": "2026-10-04",
+   "amount": 62000,
+   "catId": "ipmwxejyvhy3",
+   "title": "Пример: кофе и ужин",
+   "method": ""
+  },
+  {
+   "id": "ica8vxclvhy6",
+   "type": "expense",
+   "date": "2026-10-05",
+   "amount": 12345,
+   "catId": "ihk05vu9vhy3",
+   "title": "Хлеб",
+   "method": ""
+  }
+ ],
+ "allocs": [
+  {
+   "id": "ivqmj1zxvhy6",
+   "month": "2026-10",
+   "catId": "iyplykbxvhy3",
+   "amount": 2800000,
+   "date": "2026-10-01",
+   "kind": "income",
+   "incomeId": "i26q9291vhy4"
+  },
+  {
+   "id": "imn7svy0vhy6",
+   "month": "2026-10",
+   "catId": "ibzqu3hmvhy3",
+   "amount": 700000,
+   "date": "2026-10-01",
+   "kind": "income",
+   "incomeId": "i26q9291vhy4"
+  },
+  {
+   "id": "i5rf1vc2vhy6",
+   "month": "2026-10",
+   "catId": "i6goob3kvhy3",
+   "amount": 90000,
+   "date": "2026-10-01",
+   "kind": "income",
+   "incomeId": "i26q9291vhy4"
+  },
+  {
+   "id": "iq5vflpwvhy6",
+   "month": "2026-10",
+   "catId": "ihk05vu9vhy3",
+   "amount": 1800000,
+   "date": "2026-10-01",
+   "kind": "income",
+   "incomeId": "i26q9291vhy4"
+  },
+  {
+   "id": "ikhtj3fovhy6",
+   "month": "2026-10",
+   "catId": "ih15ih28vhy3",
+   "amount": 300000,
+   "date": "2026-10-01",
+   "kind": "income",
+   "incomeId": "i26q9291vhy4"
+  },
+  {
+   "id": "ikqgsobqvhy6",
+   "month": "2026-10",
+   "catId": "i1mn70navhy3",
+   "amount": 200000,
+   "date": "2026-10-01",
+   "kind": "income",
+   "incomeId": "i26q9291vhy4"
+  },
+  {
+   "id": "ir9b55rxvhy6",
+   "month": "2026-10",
+   "catId": "ipmwxejyvhy3",
+   "amount": 110000,
+   "date": "2026-10-01",
+   "kind": "income",
+   "incomeId": "i26q9291vhy4"
+  }
+ ],
+ "quick": {
+  "map": {
+   "хлеб": "ihk05vu9vhy3"
+  }
+ }
+}

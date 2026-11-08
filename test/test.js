@@ -246,3 +246,69 @@ L.setToday('2026-10-13');
 const D = L.demoState(); const dt = L.totals(D, '2026-10');
 ok(dt.unalloc >= 0 && dt.cash === D.settings.startBalance + 6000000 - 184050 - 45000 - 62000, 'Демо: цифры сходятся');
 console.log('\n' + n + ' проверок');
+
+/* ===== v5: совместимость со старыми данными ===== */
+{
+  const fs2 = require('fs');
+  const raw = JSON.parse(fs2.readFileSync(__dirname + '/fixtures/v1-state.json', 'utf8'));
+  const exp = JSON.parse(fs2.readFileSync(__dirname + '/fixtures/v1-expected.json', 'utf8'));
+  const before = JSON.stringify(raw);
+  const N = L.normalize(raw);
+  ok(JSON.stringify(raw) === before, 'v5. normalize не меняет исходный объект');
+  ok(N && N.schema === 2 && N.v === 1, 'v5. старые данные читаются, v=1 сохранён, schema=2');
+  eq(N.txs.length, raw.txs.length, 'v5. операции не потеряны'); eq(N.allocs.length, raw.allocs.length, 'v5. распределения не потеряны');
+  eq(N.bills.length, raw.bills.length, 'v5. платежи не потеряны'); eq(N.cats.length, raw.cats.length, 'v5. категории не потеряны');
+  eq(N.settings.name, 'Тест', 'v5. имя сохранено'); eq(N.bills[0].span, 5, 'v5. период платежа сохранён'); eq(N.plan[0].dayTo, 3, 'v5. период поступления сохранён');
+  ok(N.quick.map['хлеб'.slice(0, 5)] === raw.quick.map['хлеб'.slice(0, 5)], 'v5. обученные категории сохранены');
+  ok(Array.isArray(N.debts) && N.debts.length === 0 && N.fx && N.fx.per, 'v5. новые поля добавлены пустыми');
+  L.setToday('2026-10-20');
+  const T = L.totals(N, '2026-10');
+  eq(T.cash, exp.cash, 'v5. баланс как раньше'); eq(T.spentM, exp.spentM, 'v5. расходы как раньше'); eq(T.safe, exp.safe, 'v5. «можно тратить» как раньше');
+  ok(N.cats.every((c) => L.env(N, c.id, '2026-10').bal === exp.env[c.id]), 'v5. остатки всех конвертов как раньше');
+  // повторная нормализация идемпотентна
+  ok(JSON.stringify(L.normalize(N)) === JSON.stringify(N), 'v5. normalize идемпотентна');
+  // пустые/битые новые поля
+  const odd = JSON.parse(before); odd.debts = 'x'; odd.fx = null; odd.cats[0].goal = { target: -1 };
+  const O = L.normalize(odd); ok(Array.isArray(O.debts) && O.fx.per && O.cats[0].goal === null, 'v5. битые новые поля не ломают загрузку');
+}
+
+/* ===== v5: голос — суммы от тысячи ===== */
+{
+  const q = (t) => L.parseQuick(t);
+  const A = (t, kop, title, cur) => { const r = q(t); ok(r.amount === kop && (title === undefined || r.title === title) && (r.cur || '') === (cur || ''), 'голос: «' + t + '» → ' + (r.amount / 100) + ' ' + r.title + (r.cur ? ' ' + r.cur : '')); };
+  A('кофе 5000', 500000, 'Кофе'); A('кофе 5 000 рублей', 500000, 'Кофе'); A('такси 5 тысяч', 500000, 'Такси'); A('такси 5тысяч', 500000, 'Такси');
+  A('продукты пять тысяч двести', 520000, 'Продукты'); A('ужин 1,5 тысячи', 150000, 'Ужин'); A('обед 2 тысячи 500', 250000, 'Обед'); A('кофе 5к', 500000, 'Кофе');
+  A('кофе 1.200', 120000, 'Кофе'); A('подарок 12 345 руб.', 1234500, 'Подарок'); A('вода 85', 8500, 'Вода'); A('вода 85 рублей 50 копеек', 8550, 'Вода');
+  A('шопинг 5000₽', 500000, 'Шопинг'); A('полторы тысячи кофе', 150000, 'Кофе'); A('тысяча двести продукты', 120000, 'Продукты'); A('2 тысячи 500 рублей такси', 250000, 'Такси');
+  A('кофе 4 евро', 400, 'Кофе', 'EUR'); A('отель 3 тысячи долларов', 300000, 'Отель', 'USD'); A('обед 800 бат', 80000, 'Обед', 'THB');
+  ok(!/тысяч/i.test(q('такси 5 тысяч').title), 'голос: слово «тысяч» не попадает в название');
+}
+
+/* ===== v5: цели, долги, валюты ===== */
+{
+  L.setToday('2026-10-20');
+  const G = L.newState(); const c = G.cats.find((x) => x.name === 'Отпуск и крупные покупки');
+  c.goal = { target: 12000000, date: '2027-03-15' };
+  eq(L.monthsLeft('2026-10', '2027-03-15'), 6, 'цель: 6 месяцев (окт–мар включительно)');
+  eq(L.goalInfo(G, c, '2026-10').perMonth, 2000000, 'цель: 120 000 / 6 = 20 000 в месяц');
+  G.allocs.push({ id: 'a1', month: '2026-10', catId: c.id, amount: 2000000, date: '2026-10-01', kind: 'manual' });
+  eq(L.goalInfo(G, c, '2026-10').perMonth, 2000000, 'цель: взнос этого месяца не меняет сумму в этом месяце');
+  eq(L.goalInfo(G, c, '2026-11').perMonth, 2000000, 'цель: в следующем месяце (120−20)/5 = 20 000');
+    c.goal.date = '2026-09-01'; ok(L.goalInfo(G, c, '2026-10').overdue && L.goalInfo(G, c, '2026-10').perMonth === 12000000, 'цель: просрочена — весь остаток в этом месяце');
+  c.goal.date = '2027-03-15'; c.rule.type = 'goal'; G.plan.forEach((p) => { p.amount = 5000000; });
+  L.setToday('2026-11-02'); G.allocs = []; L.addIncome(G, { slotId: G.plan[0].id, slotMonth: '2026-11', date: '2026-11-01', amount: 5000000 });
+  const res = L.planAllocation(G, '2026-11', { refDate: '2026-11-01' }); eq(res.adds[c.id], 2400000, 'цель: автораспределение кладёт 120 000 / 5 мес. = 24 000'); L.setToday('2026-10-20');
+  // долги
+  const D = L.newState(); const d1 = L.addDebt(D, { who: 'Анна', dir: 'owe', amount: 1000000 }); const d2 = L.addDebt(D, { who: 'Олег', dir: 'owed', amount: 500050 });
+  eq(L.payDebt(D, d1.id, 300000, '2026-10-20'), 300000, 'долг: частичный возврат'); eq(L.payDebt(D, d1.id, 9999999), 700000, 'долг: возврат не больше остатка');
+  eq(L.debtLeft(d1), 0, 'долг: закрыт'); eq(L.debtTotals(D).owed, 500050, 'долг: мне должны'); eq(L.debtTotals(D).owe, 0, 'долг: я должна');
+  eq(L.cash(D, '2026-10'), 0, 'долг: баланс не затронут');
+  // валюты
+  eq(L.convert(2000, 92.37), 184740, '20.00 USD × 92.37 = 1847.40 ₽ (в копейках)');
+  const E = L.newState(); const t = L.addExpense(E, { date: '2026-10-20', amount: L.convert(2000, 92.37), catId: E.cats[0].id, title: 'Кофе', cur: 'USD', orig: 2000, rate: 92.37 });
+  ok(t.cur === 'USD' && t.orig === 2000 && t.rate === 92.37 && t.amount === 184740, 'валюта: операция хранит исходную сумму и курс');
+  const t2 = L.addExpense(E, { date: '2026-10-20', amount: 100, catId: E.cats[0].id }); ok(!('cur' in t2), 'валюта: обычная операция без новых полей');
+  const f1 = L.ratesFromApi({ result: 'success', rates: { RUB: 1, USD: 0.0108, EUR: 0.0099 } }, 'RUB'); ok(Math.abs(f1.per.USD - 92.59) < 0.1 && !f1.per.RUB, 'курсы: разбор ответа с базой RUB');
+  const f2 = L.ratesFromCbr({ Date: '2026-10-20T11:30:00+03:00', Valute: { USD: { Nominal: 1, Value: 92.3 }, JPY: { Nominal: 100, Value: 60 } } }); ok(f2.per.USD === 92.3 && f2.per.JPY === 0.6, 'курсы: разбор ЦБ с учётом номинала');
+  ok(L.ratesFromApi({}, 'RUB') === null, 'курсы: пустой ответ → null');
+}

@@ -23,8 +23,23 @@ const ICON = {
 const ic = (n) => '<svg viewBox="0 0 24 24" aria-hidden="true">' + ICON[n] + '</svg>';
 
 /* ---------- хранение ---------- */
+// Ключ хранения и прежние поля не меняются. Перед первым сохранением в новом формате прежние данные
+// дополнительно копируются в отдельный ключ (он никогда не перезаписывается и не удаляется приложением).
 function load() {
-  try { const raw = localStorage.getItem(KEY); if (raw) { const n = L.normalize(JSON.parse(raw)); if (n) return n; } } catch (e) { persistOK = false; }
+  let raw = null;
+  try {
+    raw = localStorage.getItem(KEY);
+    if (raw) {
+      const parsed = JSON.parse(raw), n = L.normalize(parsed);
+      if (n) {
+        const sv = parsed && parsed.schema ? parsed.schema : 1;
+        if (sv < L.SCHEMA) { try { if (!localStorage.getItem(KEY + '.backup-v' + sv)) localStorage.setItem(KEY + '.backup-v' + sv, raw); } catch (e) { /* нет места — данные всё равно остаются в основном ключе */ } }
+        return n;
+      }
+    }
+  } catch (e) { persistOK = false; }
+  // Данные есть, но не читаются: сохраняем исходный текст, чтобы новое сохранение его не затёрло.
+  if (raw) { try { localStorage.setItem(KEY + '.corrupt-' + Date.now(), raw); } catch (e) { /* ничего не поделать */ } }
   return L.newState();
 }
 function save() { try { localStorage.setItem(KEY, JSON.stringify(S)); } catch (e) { persistOK = false; } }
@@ -100,13 +115,13 @@ function render(keepScroll) {
   let h = '';
   if (S.settings.demo) h += '<div class="demo"><span>Показаны демо-данные</span><button class="btn sm" data-a="demoOff">Вернуть мои данные</button></div>';
   if (!persistOK) h += '<div class="banner bad" style="margin-bottom:12px">Браузер не разрешает сохранять данные. Пока вкладка открыта, всё работает, но после закрытия данные пропадут. Сделайте резервную копию в настройках.</div>';
-  h += ({ home: viewHome, budget: viewBudget, pay: viewPay, hist: viewHist })[ui.tab]();
+  h += ({ home: viewHome, budget: viewBudget, pay: viewPay, hist: viewHist, debts: viewDebts })[ui.tab]();
   app.innerHTML = h;
   const tabBtn = (x) => '<button data-a="tab" data-t="' + x[0] + '" class="' + (ui.tab === x[0] ? 'on' : '') + '"' + (ui.tab === x[0] ? ' aria-current="page"' : '') + '>' + ic(x[1]) + x[2] + '</button>';
-  $('#nav').innerHTML = '<div>' + tabBtn(['home', 'home', 'Главная']) + tabBtn(['budget', 'wallet', 'Бюджет']) + '<button class="mic" data-a="qOpen" aria-label="Быстрая запись расхода голосом">' + ic('mic') + '</button>' + tabBtn(['pay', 'cal', 'Платежи']) + tabBtn(['hist', 'list', 'История']) + '</div>';
+  $('#nav').innerHTML = '<div>' + tabBtn(['home', 'home', 'Главная']) + tabBtn(['budget', 'wallet', 'Бюджет']) + '<button class="mic" data-a="qOpen" aria-label="Быстрая запись расхода голосом">' + ic('mic') + '</button>' + tabBtn(['pay', 'cal', 'Платежи']) + tabBtn(['debts', 'debt', 'Долги']) + tabBtn(['hist', 'list', 'История']) + '</div>';
   const fab = $('#fab');
-  fab.setAttribute('aria-label', ui.tab === 'pay' ? 'Добавить платёж' : 'Добавить');
-  fab.dataset.a = ui.tab === 'pay' ? 'billNew' : 'fabMenu';
+  fab.setAttribute('aria-label', ui.tab === 'pay' ? 'Добавить платёж' : ui.tab === 'debts' ? 'Добавить долг' : 'Добавить');
+  fab.dataset.a = ui.tab === 'pay' ? 'billNew' : ui.tab === 'debts' ? 'debtNew' : 'fabMenu';
   if (keepScroll !== false) window.scrollTo(0, y); else window.scrollTo(0, 0);
   renderScreen();
 }
@@ -132,7 +147,7 @@ function catRow(c, m, detailed) {
   } else {
     body = '<div class="mini"><span>План <b>' + (p > 0 ? fmt(p) : '—') + '</b></span><span>Выделено <b>' + fmt(e.avail) + '</b></span><span>Потрачено <b>' + fmt(e.spent) + '</b></span></div>';
   }
-  return '<button class="cat" data-a="cat" data-id="' + c.id + '"><div class="row"><div class="nm sp">' + esc(c.name) + '</div>' + badge + '<div class="amt ' + (e.bal < 0 ? 'neg' : '') + '">' + fmt(e.bal) + '</div></div>' + body + '<div class="prog ' + cls + '"><i style="width:' + Math.min(100, Math.round(pct * 100)) + '%"></i></div></button>';
+  return '<button class="cat" data-a="cat" data-id="' + c.id + '"><div class="row">' + catIcon(c) + '<div class="nm sp">' + esc(c.name) + '</div>' + badge + '<div class="amt ' + (e.bal < 0 ? 'neg' : '') + '">' + fmt(e.bal) + '</div></div>' + body + '<div class="prog ' + cls + '"><i style="width:' + Math.min(100, Math.round(pct * 100)) + '%"></i></div>' + goalLine(c, m) + '</button>';
 }
 function billRow(it, opts) {
   opts = opts || {};
@@ -147,7 +162,7 @@ function billRow(it, opts) {
   }
   const act = it.paid ? 'unpay' : it.skipped ? 'unskip' : 'pay';
   return '<div class="li" style="gap:10px">' + (opts.check ? '<button class="chk ' + (it.paid ? 'on' : '') + '" data-a="' + act + '" data-b="' + it.bill.id + '" data-d="' + it.due + '" aria-label="' + (it.paid ? 'Отменить оплату' : it.skipped ? 'Вернуть платёж' : 'Отметить оплаченным') + '">' + ic('ok') + '</button>' : '') +
-    '<button class="sp" style="text-align:left;min-width:0" data-a="' + (opts.check ? 'billEdit' : 'payOpen') + '" data-b="' + it.bill.id + '" data-d="' + it.due + '"><div class="t">' + esc(it.bill.name) + '</div><div class="s">' + spanText(it.due, it.dueEnd) + ' · ' + esc(cat) + '</div><div style="margin-top:4px">' + badge + '</div></button><div class="amt">' + fmt(it.amount) + '</div></div>';
+    iconHTML(it.bill.icon, it.bill.name) + '<button class="sp" style="text-align:left;min-width:0" data-a="' + (opts.check ? 'billEdit' : 'payOpen') + '" data-b="' + it.bill.id + '" data-d="' + it.due + '"><div class="t">' + esc(it.bill.name) + '</div><div class="s">' + spanText(it.due, it.dueEnd) + ' · ' + esc(cat) + '</div><div style="margin-top:4px">' + badge + '</div></button><div class="amt">' + fmt(it.amount) + '</div></div>';
 }
 function viewHome() {
   const m = ui.month, T = L.totals(S, m), isNow = m === L.monthOf(L.today());
@@ -164,6 +179,7 @@ function viewHome() {
   h += '<div class="grid2"><div class="stat"><div class="l">Получено за месяц</div><div class="v">' + fmt(T.incomeM) + '</div></div><div class="stat"><div class="l">Потрачено</div><div class="v">' + fmt(T.spentM) + '</div></div><div class="stat"><div class="l">Отложено под платежи</div><div class="v">' + fmt(T.reserved) + '</div><div class="xs muted">к оплате ' + fmt(pendSum) + '</div></div><div class="stat"><div class="l">Можно распределить</div><div class="v ' + (T.unalloc < 0 ? 'neg' : '') + '">' + fmt(T.unalloc) + '</div></div></div>';
   h += '</div>';
   const slots = L.slots(S, m);
+  if (S.debts.length) { const D = L.debtTotals(S); if (D.owe + D.owed > 0) h += '<button class="banner" style="margin-top:12px;width:100%;text-align:left" data-a="tab" data-t="debts"><div>Долги: ' + (D.owe ? gv('я должна', 'я должен', 'я должен(на)') + ' <b>' + fmt(D.owe) + '</b>' : '') + (D.owe && D.owed ? ' · ' : '') + (D.owed ? 'мне должны <b>' + fmt(D.owed) + '</b>' : '') + '</div></button>'; }
   h += '<div class="sect"><h2>Поступления</h2><button class="link" data-a="settings">Настроить</button></div>';
   h += slots.length ? '<div class="list">' + slots.map(slotRow).join('') + '</div>' : '<div class="card empty"><h3>Поступления не настроены</h3><p>Укажите даты и суммы, когда вы получаете деньги.</p><button class="btn soft" data-a="settings">Настроить</button></div>';
   const up = T.pending.slice(0, 4);
@@ -208,12 +224,13 @@ function openCat(id, mode) {
   const back = '<button class="btn block" data-a="cat" data-id="' + id + '">Назад</button>';
   if (mode === 'view') {
     const p = L.planned(S, c, m), pct = e.avail > 0 ? e.spent / e.avail : 0;
-    setSheet('<h2>' + esc(c.name) + '</h2><div class="muted sm">' + esc(L.group(S, c.groupId) ? L.group(S, c.groupId).name : '') + '</div>' +
+    setSheet('<h2 style="display:flex;align-items:center;gap:10px">' + catIcon(c).replace('ico ', 'ico big ') + esc(c.name) + '</h2><div class="muted sm">' + esc(L.group(S, c.groupId) ? L.group(S, c.groupId).name : '') + '</div>' +
       '<div class="num" style="font-size:36px;font-weight:600;margin:10px 0 2px;' + (e.bal < 0 ? 'color:var(--bad)' : '') + '">' + fmt(e.bal) + '</div><div class="sm muted">' + (e.bal < 0 ? 'перерасход, покрыт из свободных денег' : 'осталось в конверте') + '</div>' +
       '<div class="prog ' + (e.bal < 0 ? 'bad' : pct >= .85 ? 'warn' : '') + '"><i style="width:' + Math.min(100, Math.round(pct * 100)) + '%"></i></div>' +
       '<div class="cols4"><div><div class="l">Запланировано</div><div class="v">' + (p > 0 ? fmt(p) : '—') + '</div></div><div><div class="l">Перенос с прошлого</div><div class="v">' + fmt(e.carry) + '</div></div><div><div class="l">Выделено в месяце</div><div class="v">' + fmt(e.alloc) + '</div></div><div><div class="l">Потрачено</div><div class="v">' + fmt(e.spent) + '</div></div></div>' +
+      goalBlock(c, m) +
       (pend > 0 ? '<div class="banner" style="margin-top:12px"><div>Под неоплаченные платежи нужно <b>' + fmt(pend) + '</b>, отложено <b>' + fmt(L.committed(S, id, m)) + '</b>.</div></div>' : '') +
-      '<div class="foot"><div class="two"><button class="btn primary" data-a="expNew" data-cat="' + id + '">Расход</button><button class="btn soft" data-a="catMode" data-id="' + id + '" data-mode="top">Пополнить</button></div><div class="two"><button class="btn" data-a="catMode" data-id="' + id + '" data-mode="move">Перенести</button><button class="btn" data-a="catMode" data-id="' + id + '" data-mode="rel">Вернуть в свободные</button></div><div class="two"><button class="btn ghost" data-a="ruleEdit" data-id="' + id + '">Правило</button><button class="btn ghost" data-a="catEdit" data-id="' + id + '">Изменить</button></div></div>');
+      '<div class="foot"><div class="two"><button class="btn primary" data-a="expNew" data-cat="' + id + '">Расход</button><button class="btn soft" data-a="catMode" data-id="' + id + '" data-mode="top">Пополнить</button></div><div class="two"><button class="btn" data-a="catMode" data-id="' + id + '" data-mode="move">Перенести</button><button class="btn" data-a="catMode" data-id="' + id + '" data-mode="rel">Вернуть в свободные</button></div><div class="two"><button class="btn ghost" data-a="ruleEdit" data-id="' + id + '">Правило</button><button class="btn ghost" data-a="catEdit" data-id="' + id + '">Изменить</button></div><button class="btn ghost block" data-a="goalOpen" data-id="' + id + '">' + (c.goal ? 'Изменить цель к дате' : 'Накопить к дате (цель)') + '</button></div>');
     return;
   }
   const titles = { top: 'Пополнить из свободных', move: 'Перенести в другую категорию', rel: 'Вернуть в свободные' };

@@ -52,7 +52,8 @@ function openBill(id, more) {
   const b = id ? S.bills.find((x) => x.id === id) : null;
   if (!b && !S.cats.length) { toast('Сначала создайте категорию'); return; }
   const first = (S.cats.find((c) => L.catKind(S, c) === 'oblig') || S.cats[0]);
-  const d = b || { span: 0, name: '', catId: more && more.catId || first.id, amount: 0, date: defaultDate(), period: 'month', interval: 30, endDate: '', note: '' };
+  const fromMenu = !!(more && more.fromMenu) && !b;
+  const d = b || { icon: '', span: 0, name: '', catId: more && more.catId || first.id, amount: 0, date: defaultDate(), period: 'month', interval: 30, endDate: '', note: '' };
   openSheet('<h2>' + (b ? 'Изменить платёж' : 'Новый платёж') + '</h2>' +
     '<label class="f" for="f-name">Название</label><input class="in" id="f-name" value="' + esc(d.name) + '" placeholder="Например: iCloud 200 ГБ" maxlength="60" ' + (b ? '' : 'data-focus') + '>' +
     '<label class="f" for="f-cat">Категория</label>' + catSelect('f-cat', d.catId) +
@@ -62,10 +63,12 @@ function openBill(id, more) {
     '<div id="f-ivw" ' + (d.period === 'custom' ? '' : 'hidden') + '><label class="f" for="f-iv">Интервал, дней</label><input class="in" id="f-iv" inputmode="numeric" value="' + (d.interval || 30) + '"></div>' +
     '<label class="f" for="f-end">Дата окончания (если есть)</label>' + dateField('f-end', d.endDate || '') + '' +
     '<label class="f" for="f-note">Комментарий</label><textarea class="ta" id="f-note" maxlength="300">' + esc(d.note || '') + '</textarea>' +
+    iconPicker('bill', d.icon || '', { upload: true, name: d.name }) +
+    '<p class="xs muted" style="margin-top:4px">Можно загрузить свою картинку (например, логотип сервиса из галереи) или выбрать значок или эмодзи.</p>' +
     '<p class="xs muted" style="margin-top:8px">Статус «ожидает» или «оплачено» ставится отдельно для каждой даты в списке платежей.</p>' +
     '<div class="errt" id="f-err"></div><div class="foot"><button class="btn primary block" data-a="billSave" data-b="' + (b ? b.id : '') + '">Сохранить</button>' +
     (b ? '<button class="btn danger block" data-a="billDel" data-b="' + b.id + '">Удалить платёж</button>' : (ui.screen === 'wizard' ? '<button class="btn soft block" data-a="billSave" data-b="" data-more="1">Сохранить и добавить ещё</button>' : '')) +
-    '<button class="btn block" data-a="close">Отмена</button></div>');
+    backBtn(fromMenu) + '</div>');
 }
 function saveBill(id, more) {
   const err = (t) => { $('#f-err').textContent = t; };
@@ -78,7 +81,7 @@ function saveBill(id, more) {
   if (end && (!L.validDate(end) || end < date)) return err('Дата окончания не может быть раньше даты платежа');
   if (dto && (!L.validDate(dto) || dto < date)) return err('Дата «Оплатить по» не может быть раньше даты платежа');
   if (dto && L.daysBetween(date, dto) > 90) return err('Период оплаты не может быть длиннее 90 дней');
-  const o = { span: dto ? L.daysBetween(date, dto) : 0, name, catId: val('f-cat'), amount, date, period, interval: period === 'custom' ? interval : 0, endDate: end || '', note: val('f-note').trim() };
+  const o = { span: dto ? L.daysBetween(date, dto) : 0, name, catId: val('f-cat'), amount, date, period, interval: period === 'custom' ? interval : 0, endDate: end || '', note: val('f-note').trim(), icon: icoState.bill || '' };
   if (id) Object.assign(S.bills.find((b) => b.id === id), o);
   else S.bills.push(Object.assign({ id: L.uid(), skipped: [] }, o));
   commit(); closeSheet(); toast('Платёж сохранён');
@@ -104,19 +107,21 @@ function openExpense(o) {
   const d = tx ? tx.date : defaultDate();
   openSheet('<h2>' + (tx ? 'Изменить расход' : 'Расход') + '</h2>' +
     (tx && tx.billId ? '<div class="banner good"><div>Это оплата платежа «' + esc(tx.title) + '».</div></div>' : '') +
-    '<input class="bigin" id="f-amount" inputmode="decimal" autocomplete="off" placeholder="0" aria-label="Сумма" value="' + (tx ? kopToInput(tx.amount) : '') + '" data-i="expAmt" ' + (tx ? '' : 'data-focus') + '>' +
+    '<input class="bigin" id="f-amount" inputmode="decimal" autocomplete="off" placeholder="0" aria-label="Сумма" value="' + (tx ? kopToInput(tx.cur ? tx.orig : tx.amount) : '') + '" data-i="expAmt" ' + (tx ? '' : 'data-focus') + '>' +
+    fxBlock('f', tx && tx.cur || '', tx && tx.cur ? tx.rate : 0) +
     '<label class="f">Категория</label>' + S.groups.map((g) => { const cs = S.cats.filter((c) => c.groupId === g.id); return cs.length ? '<div class="xs muted" style="margin:10px 0 6px">' + esc(g.name) + '</div><div class="chips">' + cs.map((c) => '<button class="chip ' + (c.id === expSel ? 'on' : '') + '" data-a="pickCat" data-id="' + c.id + '">' + esc(c.name) + '</button>').join('') + '</div>' : ''; }).join('') +
     '<div class="sm" id="f-info" style="margin-top:12px;min-height:22px"></div>' +
     '<div class="two"><div><label class="f" for="f-date">Дата</label>' + dateField('f-date', d) + '</div><div><label class="f" for="f-title">Название</label><input class="in" id="f-title" maxlength="60" placeholder="Необязательно" value="' + esc(tx ? tx.title : '') + '"></div></div>' +
     '<details style="margin-top:12px"><summary class="sm muted" style="min-height:40px;display:flex;align-items:center">Способ оплаты</summary><select class="sel" id="f-method"><option value="">Не указан</option>' + ['Карта', 'Наличные', 'Перевод', 'Другое'].map((x) => '<option' + (tx && tx.method === x ? ' selected' : '') + '>' + x + '</option>').join('') + '</select></details>' +
     '<div class="errt" id="f-err"></div><div class="foot"><button class="btn primary block" data-a="expSave" data-id="' + (tx ? tx.id : '') + '">Сохранить</button>' + (tx ? '<button class="btn danger block" data-a="txDel" data-id="' + tx.id + '">Удалить расход</button>' : '') + '' + backBtn(o.fromMenu && !tx) + '</div>');
-  expInfo(tx);
+  expInfo(tx); fxInfoUpd('f');
 }
 function expInfo(tx) {
   const el = $('#f-info'); if (!el) return;
   if (!expSel) { el.innerHTML = '<span class="muted">Выберите категорию</span>'; return; }
   const date = val('f-date') || defaultDate(), m = L.validDate(date) ? L.monthOf(date) : ui.month;
-  const amt = L.parseMoney(val('f-amount')) || 0;
+  let amt = L.parseMoney(val('f-amount')) || 0;
+  { const fx = fxRead('f'); if (fx.cur) amt = fx.rate > 0 ? L.convert(amt, fx.rate) : 0; }
   let bal = L.env(S, expSel, m).bal;
   if (tx && tx.catId === expSel && L.monthOf(tx.date) <= m) bal += tx.amount;
   const after = bal - amt;
@@ -124,12 +129,15 @@ function expInfo(tx) {
 }
 function saveExpense(id) {
   const err = (t) => { $('#f-err').textContent = t; };
-  const amount = L.parseMoney(val('f-amount')), date = val('f-date');
-  if (!amount || amount <= 0) return err('Введите сумму больше нуля');
+  const fc = fxCollect('f', 'f-amount'), date = val('f-date');
+  if (fc.error) return err(fc.error);
+  const amount = fc.amount;
   if (!expSel) return err('Выберите категорию');
   if (!L.validDate(date)) return err('Укажите дату');
   const o = { amount, date, catId: expSel, title: val('f-title').trim(), method: val('f-method') };
-  if (id) Object.assign(S.txs.find((t) => t.id === id), o); else L.addExpense(S, o);
+  if (id) { const t = S.txs.find((x) => x.id === id); Object.assign(t, o); delete t.cur; delete t.orig; delete t.rate; if (fc.cur) { t.cur = fc.cur; t.orig = fc.orig; t.rate = fc.rate; } }
+  else L.addExpense(S, Object.assign(o, fc.cur ? { cur: fc.cur, orig: fc.orig, rate: fc.rate } : {}));
+  if (fc.cur) { S.fx.last = S.fx.last || {}; S.fx.last[fc.cur] = fc.rate; }
   commit(); closeSheet(); toast('Расход сохранён');
 }
 
@@ -206,7 +214,7 @@ function histRow(r) {
   if (r.k === 'tx') {
     const t = r.t;
     if (t.type === 'income') return '<button class="li" data-a="txOpen" data-id="' + t.id + '"><div class="sp"><div class="t">' + esc(t.source || 'Доход') + '</div><div class="s">' + (t.kind === 'plan' ? 'Плановое поступление' : 'Дополнительный доход') + '</div></div><div class="amt pos">' + fmt(t.amount, { sign: true }) + '</div></button>';
-    return '<button class="li" data-a="txOpen" data-id="' + t.id + '"><div class="sp"><div class="t">' + esc(t.title || catName(t.catId)) + '</div><div class="s">' + esc(catName(t.catId)) + (t.method ? ' · ' + esc(t.method) : '') + (t.billId ? ' · платёж' : '') + '</div></div><div class="amt">−' + fmt(t.amount) + '</div></button>';
+    return '<button class="li" data-a="txOpen" data-id="' + t.id + '"><div class="sp"><div class="t">' + esc(t.title || catName(t.catId)) + '</div><div class="s">' + esc(catName(t.catId)) + (t.method ? ' · ' + esc(t.method) : '') + (t.billId ? ' · платёж' : '') + (t.cur ? ' · ' + esc(fmtForeign(t.orig, t.cur)) + ' × ' + rateText(t.rate) : '') + '</div></div><div class="amt">−' + fmt(t.amount) + '</div></button>';
   }
   const g = r.g, tot = g.items.reduce((s, a) => s + a.amount, 0);
   let title, sub, amt = fmt(Math.abs(tot));
@@ -229,6 +237,7 @@ function openQuick(auto) {
     '<div class="qwrap"><input class="in" id="q-text" autocomplete="off" autocapitalize="sentences" placeholder="Что и сколько" data-i="qText"><button class="micb" id="q-mic" data-a="qMic" aria-label="Говорить">' + ic('mic') + '</button></div>' +
     '<div class="sm muted" id="q-status" style="margin-top:8px;min-height:22px" role="status"></div>' +
     '<div class="two" style="margin-top:6px"><div><label class="f" for="q-amt">Сумма</label><input class="in" id="q-amt" inputmode="decimal" placeholder="0" data-i="qAmt"></div><div><label class="f">Когда</label><div class="in" id="q-when" style="display:flex;align-items:center">Сегодня</div></div></div>' +
+    fxBlock('q', '', 0) +
     '<label class="f" for="q-cat">Категория</label><select class="sel" id="q-cat" data-c="qCat"><option value="">Выберите категорию</option>' + S.groups.map((g) => '<optgroup label="' + esc(g.name) + '">' + S.cats.filter((c) => c.groupId === g.id).map((c) => '<option value="' + c.id + '">' + esc(c.name) + '</option>').join('') + '</optgroup>').join('') + '</select>' +
     '<div class="errt" id="f-err"></div><div class="foot"><button class="btn primary block" id="q-save" data-a="qSave" disabled>Добавить расход</button><button class="btn ghost block" data-a="qMore">Подробнее</button><button class="btn block" data-a="close">Закрыть</button></div>');
   if (auto) startListen(); else focusQ();
@@ -244,11 +253,14 @@ function qUpdate() {
   const cat = document.getElementById('q-cat');
   if (!qk.catManual) cat.value = L.guessCat(S, r.words) || '';
   document.getElementById('q-when').textContent = r.dateOff === -1 ? 'Вчера' : 'Сегодня';
-  qCheck();
+  const cs = document.getElementById('q-cur');
+  if (cs && !qk.curManual && (r.cur || '') !== cs.value && (!r.cur || fxList().indexOf(r.cur) >= 0)) { cs.value = r.cur || ''; fxChanged('q'); }
+  fxInfoUpd('q'); qCheck();
 }
 function qCheck() {
-  const a = L.parseMoney(val('q-amt')), c = val('q-cat'), b = document.getElementById('q-save');
-  if (b) b.disabled = !(a > 0 && c);
+  const a = L.parseMoney(val('q-amt')), c = val('q-cat'), b = document.getElementById('q-save'), fx = fxRead('q');
+  if (b) b.disabled = !(a > 0 && c && (!fx.cur || fx.rate > 0));
+  fxInfoUpd('q');
 }
 function startListen() {
   const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
@@ -270,11 +282,13 @@ function startListen() {
 }
 function stopListen() { try { if (rec) { rec.onend = null; rec.onerror = null; rec.abort(); } } catch (e) { /* уже остановлено */ } rec = null; listening = false; qMicUi(); }
 function saveQuick() {
-  const amount = L.parseMoney(val('q-amt')), cid = val('q-cat');
-  if (!(amount > 0)) return void (document.getElementById('f-err').textContent = 'Введите сумму больше нуля');
+  const fc = fxCollect('q', 'q-amt'), cid = val('q-cat');
+  if (fc.error) return void (document.getElementById('f-err').textContent = fc.error);
+  const amount = fc.amount;
   if (!cid) return void (document.getElementById('f-err').textContent = 'Выберите категорию');
   const date = L.addDays(L.today(), qk.dateOff);
-  L.addExpense(S, { date, amount, catId: cid, title: qk.title });
+  L.addExpense(S, { date, amount, catId: cid, title: qk.title, cur: fc.cur, orig: fc.orig, rate: fc.rate });
+  if (fc.cur) { S.fx.last = S.fx.last || {}; S.fx.last[fc.cur] = fc.rate; }
   L.learnCat(S, qk.words, cid);
-  commit(); closeSheet(); toast('Записано: ' + (qk.title ? qk.title + ' ' : '') + fmt(amount) + ' · ' + catName(cid));
+  commit(); closeSheet(); toast('Записано: ' + (qk.title ? qk.title + ' ' : '') + (fc.cur ? fmtForeign(fc.orig, fc.cur) + ' ≈ ' : '') + fmt(amount) + ' · ' + catName(cid));
 }

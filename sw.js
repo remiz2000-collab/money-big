@@ -1,5 +1,5 @@
 // Версию меняйте при каждом обновлении файлов, чтобы телефон скачал новую.
-const VERSION = 'budget-v4';
+const VERSION = 'budget-v5';
 const FILES = ['./', './index.html', './manifest.webmanifest', './icons/icon-192.png', './icons/icon-512.png', './icons/icon-maskable-512.png', './icons/apple-touch-icon.png'];
 
 self.addEventListener('install', (e) => {

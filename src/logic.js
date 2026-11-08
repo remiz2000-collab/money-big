@@ -59,8 +59,9 @@ const L = {};
     L.defaultGroups().forEach((g) => L.STARTER[g.kind].forEach((n) => out.push(L.newCat(g.id, n, g.kind))));
     return out;
   };
+  L.SCHEMA = 2; // 2: добавлены долги, курсы валют, значки, цели. Старые данные (v1) читаются без потерь.
   L.newState = () => ({
-    v: 1,
+    v: 1, schema: L.SCHEMA,
     settings: { name: '', gender: '', currency: 'RUB', cents: 'auto', startBalance: 0, trackFrom: monthOf(L.today()), reservePct: 0, reserveFixed: 0, setupDone: false, demo: false },
     groups: L.defaultGroups(),
     cats: L.starterCats(),
@@ -73,22 +74,28 @@ const L = {};
     txs: [],
     allocs: [],
     quick: { map: {} },
+    debts: [],
+    fx: { base: 'RUB', per: {}, at: '' },
   });
 
   L.normalize = (raw) => {
     if (!raw || typeof raw !== 'object' || !Array.isArray(raw.cats) || !Array.isArray(raw.txs) || !Array.isArray(raw.allocs) || !Array.isArray(raw.bills) || !Array.isArray(raw.plan) || !Array.isArray(raw.groups)) return null;
     const base = L.newState();
     const S = JSON.parse(JSON.stringify(raw));
-    S.v = 1;
+    S.v = 1; S.schema = L.SCHEMA; // ключ хранения и поле v не меняем; всё новое только добавляется
+    S.debts = Array.isArray(S.debts) ? S.debts : [];
+    S.fx = S.fx && typeof S.fx === 'object' && S.fx.per && typeof S.fx.per === 'object' ? S.fx : { base: (raw.settings && raw.settings.currency) || 'RUB', per: {}, at: '' };
     S.quick = S.quick && typeof S.quick.map === 'object' && S.quick.map ? S.quick : { map: {} };
     S.settings = Object.assign({}, base.settings, S.settings || {});
     const int = (x) => (Number.isFinite(x) ? Math.round(x) : 0);
     S.settings.startBalance = int(S.settings.startBalance);
-    S.cats.forEach((c) => { c.rule = Object.assign(L.newRule('personal'), c.rule || {}); c.name = String(c.name || 'Категория'); });
-    S.bills.forEach((b) => { b.span = b.span > 0 ? Math.min(366, b.span | 0) : 0; b.amount = int(b.amount); b.skipped = Array.isArray(b.skipped) ? b.skipped : []; b.period = b.period || 'month'; });
+    S.cats.forEach((c) => { c.rule = Object.assign(L.newRule('personal'), c.rule || {}); c.name = String(c.name || 'Категория'); c.icon = typeof c.icon === 'string' ? c.icon : ''; if (c.goal && !(c.goal.target > 0 && L.validDate(c.goal.date))) c.goal = null; if (c.goal) c.goal.target = int(c.goal.target); });
+    S.bills.forEach((b) => { b.span = b.span > 0 ? Math.min(366, b.span | 0) : 0; b.amount = int(b.amount); b.skipped = Array.isArray(b.skipped) ? b.skipped : []; b.period = b.period || 'month'; b.icon = typeof b.icon === 'string' ? b.icon : ''; });
     S.plan.forEach((p) => { p.amount = int(p.amount); p.dayTo = p.dayTo > p.day ? p.dayTo | 0 : 0; });
     S.txs.forEach((t) => { t.amount = int(t.amount); });
     S.allocs.forEach((a) => { a.amount = int(a.amount); });
+    S.debts = S.debts.filter((d) => d && typeof d === 'object');
+    S.debts.forEach((d) => { d.id = d.id || L.uid(); d.who = String(d.who || ''); d.dir = d.dir === 'owed' ? 'owed' : 'owe'; d.amount = int(d.amount); d.note = String(d.note || ''); d.date = d.date || ''; d.due = d.due || ''; d.paid = Array.isArray(d.paid) ? d.paid.filter((p) => p && p.amount > 0).map((p) => ({ date: p.date || '', amount: int(p.amount) })) : []; });
     return S;
   };
 
@@ -191,8 +198,17 @@ const L = {};
     const billsSum = sum(L.billItems(S, m).filter((i) => i.inMonth && i.bill.catId === c.id && !i.skipped), (i) => i.amount);
     return Math.max(billsSum, L.ruleAmount(S, c, planInc, m));
   };
+  // Цель к дате: сколько откладывать в месяц (считается от остатка конверта на начало месяца).
+  L.monthsLeft = (m, date) => { const [y1, a] = m.split('-').map(Number), [y2, b] = date.slice(0, 7).split('-').map(Number); return Math.max(1, (y2 - y1) * 12 + (b - a) + 1); };
+  L.goalInfo = (S, c, m) => {
+    const g = c && c.goal; if (!g || !(g.target > 0) || !L.validDate(g.date)) return null;
+    const e = L.env(S, c.id, m), saved = Math.max(0, e.bal), carry = Math.max(0, e.carry);
+    const months = L.monthsLeft(m, g.date), left = Math.max(0, g.target - saved);
+    return { target: g.target, date: g.date, saved, left, months, overdue: g.date < monthStart(m), done: saved >= g.target, perMonth: Math.ceil(Math.max(0, g.target - carry) / months) };
+  };
   L.ruleAmount = (S, c, planInc, m, depth) => {
     const r = c.rule;
+    if (r.type === 'goal') { const gi = L.goalInfo(S, c, m); return gi ? gi.perMonth : 0; }
     if (r.type === 'fixedMonth') return r.amount;
     if (r.type === 'fixedEach') return r.amount * S.plan.length;
     if (r.type === 'pctIncome') return L.pctOf(planInc, r.pct);
@@ -289,6 +305,7 @@ const L = {};
         if (r.type === 'fixedMonth') { target = r.amount; label = 'Фикс. в месяц'; }
         else if (r.type === 'fixedEach') { target = r.amount * nPlan; label = 'Фикс. с поступления'; }
         else if (r.type === 'pctIncome') { target = L.pctOf(incomeTotal, r.pct); label = r.pct + '% от поступлений'; }
+        else if (r.type === 'goal') { const gi = L.goalInfo(S, c, m); target = gi ? gi.perMonth : 0; label = 'Цель к дате'; }
         else if (r.type === 'pctRemainder') {
           const ob = sum(cats.filter((x) => L.catKind(S, x) === 'oblig'), (x) => mA[x.id] + add[x.id]);
           target = L.pctOf(Math.max(0, incomeTotal - ob), r.pct); label = r.pct + '% от остатка';
@@ -354,11 +371,39 @@ const L = {};
     S.txs.push(tx);
     return tx;
   };
+  L.CURRENCIES = {
+    RUB: { sign: '₽', name: 'Рубль', re: /^(руб|р$|₽|рубл)/ }, USD: { sign: '$', name: 'Доллар', re: /^(доллар|долл|бакс|usd|\$)/ }, EUR: { sign: '€', name: 'Евро', re: /^(евро|eur|€)/ },
+    TRY: { sign: '₺', name: 'Лира', re: /^(лир|try|₺)/ }, THB: { sign: '฿', name: 'Бат', re: /^(бат$|баты|батов|thb|฿)/ }, CNY: { sign: '¥', name: 'Юань', re: /^(юан|cny)/ },
+    KZT: { sign: '₸', name: 'Тенге', re: /^(тенге|kzt|₸)/ }, GEL: { sign: '₾', name: 'Лари', re: /^(лари|gel|₾)/ }, AMD: { sign: '֏', name: 'Драм', re: /^(драм|amd|֏)/ },
+    AED: { sign: 'AED', name: 'Дирхам', re: /^(дирхам|aed)/ }, GBP: { sign: '£', name: 'Фунт', re: /^(фунт|gbp|£)/ }, UAH: { sign: '₴', name: 'Гривна', re: /^(гривн|грн|uah|₴)/ },
+    BYN: { sign: 'Br', name: 'Бел. рубль', re: /^(byn)/ }, JPY: { sign: '¥', name: 'Иена', re: /^(иен|йен|jpy)/ }, VND: { sign: '₫', name: 'Донг', re: /^(донг|vnd|₫)/ },
+  };
+  // Курс: сколько единиц учётной валюты в одной единице чужой. rate — число (рубли за 1 USD).
+  L.convert = (orig, rate) => Math.round(orig * rate);
+  // Разбор ответа сервиса курсов с базой = учётная валюта: rates[X] = X за 1 единицу базы → per[X] = 1 / rates[X].
+  L.ratesFromApi = (json, base) => {
+    const per = {};
+    if (json && json.rates && typeof json.rates === 'object') for (const k of Object.keys(json.rates)) { const v = +json.rates[k]; if (v > 0 && k !== base) per[k] = 1 / v; }
+    return Object.keys(per).length ? { base, per, at: new Date().toISOString() } : null;
+  };
+  // Ответ ЦБ РФ (daily_json): Valute[X].Value рублей за Nominal единиц.
+  L.ratesFromCbr = (json) => {
+    const per = {};
+    if (json && json.Valute) for (const k of Object.keys(json.Valute)) { const v = json.Valute[k]; if (v && v.Value > 0 && v.Nominal > 0) per[k] = v.Value / v.Nominal; }
+    return Object.keys(per).length ? { base: 'RUB', per, at: json.Date || new Date().toISOString() } : null;
+  };
   L.addExpense = (S, o) => {
     const tx = { id: L.uid(), type: 'expense', date: o.date, amount: o.amount, catId: o.catId, title: o.title || '', method: o.method || '' };
+    if (o.cur && o.orig > 0 && o.rate > 0) { tx.cur = o.cur; tx.orig = o.orig; tx.rate = o.rate; }
     S.txs.push(tx);
     return tx;
   };
+  /* ---------- долги ---------- */
+  L.debtPaid = (d) => sum(d.paid, (p) => p.amount);
+  L.debtLeft = (d) => Math.max(0, d.amount - L.debtPaid(d));
+  L.debtTotals = (S) => ({ owe: sum(S.debts.filter((d) => d.dir === 'owe'), L.debtLeft), owed: sum(S.debts.filter((d) => d.dir === 'owed'), L.debtLeft) });
+  L.addDebt = (S, o) => { const d = { id: L.uid(), who: o.who, dir: o.dir === 'owed' ? 'owed' : 'owe', amount: o.amount, date: o.date || L.today(), due: o.due || '', note: o.note || '', paid: [] }; S.debts.push(d); return d; };
+  L.payDebt = (S, id, amount, date) => { const d = S.debts.find((x) => x.id === id); if (!d || !(amount > 0)) return null; const a = Math.min(amount, L.debtLeft(d)); if (a <= 0) return null; d.paid.push({ date: date || L.today(), amount: a }); return a; };
   L.payBill = (S, bill, due, amount, date) => {
     if (S.txs.some((t) => t.billId === bill.id && t.dueDate === due)) return null;
     const tx = { id: L.uid(), type: 'expense', date, amount, catId: bill.catId, title: bill.name, method: '', billId: bill.id, dueDate: due };
@@ -396,11 +441,30 @@ const L = {};
   const NW = { ноль: 0, один: 1, одна: 1, одну: 1, два: 2, две: 2, три: 3, четыре: 4, пять: 5, шесть: 6, семь: 7, восемь: 8, девять: 9, десять: 10, одиннадцать: 11, двенадцать: 12, тринадцать: 13, четырнадцать: 14, пятнадцать: 15, шестнадцать: 16, семнадцать: 17, восемнадцать: 18, девятнадцать: 19, двадцать: 20, тридцать: 30, сорок: 40, пятьдесят: 50, шестьдесят: 60, семьдесят: 70, восемьдесят: 80, девяносто: 90, сто: 100, двести: 200, триста: 300, четыреста: 400, пятьсот: 500, шестьсот: 600, семьсот: 700, восемьсот: 800, девятьсот: 900 };
   const THOU = /^тысяч/;
   const FILLER = new Set(['купила', 'купил', 'потратила', 'потратил', 'заплатила', 'заплатил', 'оплатила', 'оплатил', 'взяла', 'взял', 'за', 'на', 'я', 'только', 'что', 'сегодня', 'вчера', 'рублей', 'рубля', 'рубль', 'руб', 'р', 'копеек', 'копейки', 'копейка', 'коп', '₽', 'пожалуйста', 'расход', 'трата', 'добавь', 'добавить', 'запиши', 'записать']);
+  // Приводим числа к «чистым цифрам»: «5 000», «5.000», «5 тысяч», «5к», «1,5 тыс», «2 тысячи 500», «5000₽».
+  const THS = '(?:тысяч[а-я]*|тыс\\.?|т\\.?\\s?р\\.?|к|k)';
+  L.normQuick = (t) => {
+    t = t.replace(/[\u00a0\u202f\u2009]/g, ' ');
+    t = t.replace(/полторы тысячи/g, '1500').replace(/(\d+|две|два|три|четыре|пять) с половиной тысячи/g, (m, a) => String(({ две: 2, два: 2, три: 3, четыре: 4, пять: 5 }[a] || +a) * 1000 + 500));
+    // «2 тысячи 500 (рублей)» → 2500
+    t = t.replace(new RegExp('(\\d+(?:[.,]\\d+)?)\\s*' + THS + '\\s+(\\d{1,3})(?=\\s*(?:руб|р(?![а-я])|₽|$))', 'g'), (m, a, b) => String(Math.round(parseFloat(a.replace(',', '.')) * 1000) + +b));
+    // «5 тысяч», «5к», «1,5 тыс.» → 5000
+    t = t.replace(new RegExp('(\\d+(?:[.,]\\d+)?)\\s*' + THS + '(?![а-яa-z0-9])', 'g'), (m, a) => String(Math.round(parseFloat(a.replace(',', '.')) * 1000)));
+    // «5 000», «12 345 678» → 5000
+    for (let i = 0; i < 3; i++) t = t.replace(/(^|[^\d.,])(\d{1,3})((?: \d{3})+)(?![\d]|[.,]\d{3})/g, (m, p, a, b) => p + a + b.replace(/ /g, ''));
+    // «5.000», «1.234.567» — точка/запятая как разделитель тысяч (ровно три цифры после)
+    t = t.replace(/(^|[^\d.,])(\d{1,3}(?:[.,]\d{3})+)(?![\d]|[.,]\d)/g, (m, p, a) => p + a.replace(/[.,]/g, ''));
+    // «5000руб», «300₽» → «5000 руб»
+    t = t.replace(/(\d)(?=[а-яa-z₽$€£₺฿¥₸₾₴])/g, '$1 ').replace(/([₽$€£₺฿¥₸₾₴])(?=\d)/g, '$1 ');
+    // «руб.» «р.» → без точки
+    t = t.replace(/([а-яa-z])\.(?=\s|$)/g, '$1');
+    return t.replace(/\s+/g, ' ').trim();
+  };
   L.parseQuick = (text) => {
     let t = String(text || '').toLowerCase().replace(/ё/g, 'е').replace(/[«»"!?;:()]/g, ' ').replace(/\s+/g, ' ').trim();
     let dateOff = 0;
     if (/(^|\s)вчера(\s|$)/.test(t)) dateOff = -1;
-    t = t.replace(/полторы тысячи/g, '1500');
+    t = L.normQuick(t);
     const toks = t.split(' ').filter(Boolean).map((w) => ({ w, num: null, kind: '' }));
     // слова-числа → числа
     for (let i = 0; i < toks.length;) {
@@ -428,7 +492,10 @@ const L = {};
         i = k;
       }
     }
-    const isCur = (w) => w && /^(руб|р$|₽|рубл)/.test(w);
+    let cur = '';
+    const curOf = (w) => { for (const k of Object.keys(L.CURRENCIES)) if (L.CURRENCIES[k].re.test(w)) return k; return ''; };
+    toks.forEach((x) => { const k = curOf(x.w); if (k && k !== 'RUB' && !cur) cur = k; });
+    const isCur = (w) => !!w && !!curOf(w);
     let pick = null;
     for (const c of cands) { if (isCur(toks[c.end] && toks[c.end].w) || (c.i > 0 && isCur(toks[c.i - 1].w))) { pick = c; break; } }
     if (!pick) { const d = cands.filter((c) => c.kind === 'digit'); pick = d.length ? d[d.length - 1] : cands.slice().sort((a, b) => b.val - a.val)[0] || null; }
@@ -441,9 +508,9 @@ const L = {};
       const c2 = cands.find((c) => c.i === k);
       if (c2 && toks[c2.end] && /^коп|^к$/.test(toks[c2.end].w) && c2.val % 100 === 0 && c2.val < 10000) { amount += c2.val / 100; for (let q = c2.i; q <= c2.end; q++) used.add(q); }
     }
-    const words = toks.filter((x, i) => !used.has(i) && !FILLER.has(x.w) && !/^\d+$/.test(x.w)).map((x) => x.w);
+    const words = toks.filter((x, i) => !used.has(i) && !FILLER.has(x.w) && !curOf(x.w) && !/^\d+$/.test(x.w)).map((x) => x.w);
     const title = words.join(' ');
-    return { amount: amount && amount > 0 ? amount : null, title: title ? title[0].toUpperCase() + title.slice(1) : '', words, dateOff };
+    return { amount: amount && amount > 0 ? amount : null, title: title ? title[0].toUpperCase() + title.slice(1) : '', words, dateOff, cur };
   };
   L.QUICK_DICT = {
     'Продукты': ['вод', 'молок', 'хлеб', 'продукт', 'овощ', 'фрукт', 'мяс', 'сыр', 'яйц', 'магазин', 'пятероч', 'магнит', 'перекрест', 'вкусвилл', 'ашан', 'картош', 'банан', 'яблок', 'куриц', 'колбас', 'творог', 'йогурт', 'конфет', 'шоколад', 'чай$', 'сок$', 'печень', 'масл', 'круп', 'макарон'],

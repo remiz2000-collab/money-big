@@ -1,13 +1,14 @@
 /* ===== ИНТЕРФЕЙС: распределение, правила, настройки, мастер, обработчики ===== */
 const GKIND = { oblig: 'На обязательные платежи', daily: 'На повседневное', personal: 'На личное', goals: 'В накопления и цели' };
 const PRIOS = ['1 · Самый высокий', '2 · Высокий', '3 · Средний', '4 · Низкий', '5 · Самый низкий'];
-const RTYPES = { manual: 'Вручную', fixedMonth: 'Сумма в месяц', fixedEach: 'Сумма с каждого поступления', pctIncome: '% от поступления', pctRemainder: '% от остатка после обязательств' };
+const RTYPES = { manual: 'Вручную', fixedMonth: 'Сумма в месяц', fixedEach: 'Сумма с каждого поступления', pctIncome: '% от поступления', pctRemainder: '% от остатка после обязательств', goal: 'Цель к дате' };
 const ruleText = (c) => {
   const r = c.rule; let t = '';
   if (r.type === 'manual') t = 'Вручную';
   else if (r.type === 'fixedMonth') t = fmt(r.amount) + ' в месяц';
   else if (r.type === 'fixedEach') t = fmt(r.amount) + ' с каждого поступления';
   else if (r.type === 'pctIncome') t = r.pct + '% от поступления';
+  else if (r.type === 'goal') t = c.goal ? 'Цель к дате: ' + fmt(L.goalInfo(S, c, ui.month) ? L.goalInfo(S, c, ui.month).perMonth : 0) + ' в месяц' : 'Цель к дате (не задана)';
   else t = r.pct + '% от остатка после обязательств';
   if (r.min > 0) t += ' · минимум ' + fmt(r.min);
   if (r.max > 0) t += ' · максимум ' + fmt(r.max);
@@ -108,7 +109,7 @@ function renderRuleSheet() {
   setSheet('<h2>' + esc(c.name) + '</h2><div class="muted sm">Как пополнять эту категорию</div>' +
     (hasBills ? '<div class="banner good" style="margin-top:10px"><div>Платежи этой категории резервируются автоматически по датам и суммам.</div></div>' : '') +
     '<div class="chips" style="margin-top:12px">' + Object.keys(RTYPES).map((k) => '<button class="chip ' + (rs.type === k ? 'on' : '') + '" data-a="ruleType" data-k="' + k + '">' + RTYPES[k] + '</button>').join('') + '</div>' +
-    (rs.type === 'manual' ? '<p class="xs muted" style="margin-top:10px">Деньги не назначаются сами. Пополняйте вручную в разделе «Бюджет».</p>' : '<label class="f" for="r-val">' + (pctT ? 'Процент' : 'Сумма') + '</label><input class="in" id="r-val" inputmode="decimal" placeholder="0" value="' + (pctT ? (rs.pct || '') : kopToInput(rs.amount)) + '">') +
+    (rs.type === 'goal' ? '<p class="xs muted" style="margin-top:10px">Каждый месяц откладывается сумма, нужная, чтобы успеть накопить к дате цели. Цель задаётся в карточке категории (кнопка «Накопить к дате»).</p>' : rs.type === 'manual' ? '<p class="xs muted" style="margin-top:10px">Деньги не назначаются сами. Пополняйте вручную в разделе «Бюджет».</p>' : '<label class="f" for="r-val">' + (pctT ? 'Процент' : 'Сумма') + '</label><input class="in" id="r-val" inputmode="decimal" placeholder="0" value="' + (pctT ? (rs.pct || '') : kopToInput(rs.amount)) + '">') +
     '<label class="f" for="r-pr">Приоритет при нехватке денег</label><select class="sel" id="r-pr">' + PRIOS.map((p, i) => '<option value="' + (i + 1) + '"' + (rs.priority === i + 1 ? ' selected' : '') + '>' + p + '</option>').join('') + '</select>' +
     '<div class="two"><div><label class="f" for="r-min">Минимум</label><input class="in" id="r-min" inputmode="decimal" placeholder="0" value="' + kopToInput(rs.min) + '"></div><div><label class="f" for="r-max">Максимум в конверте</label><input class="in" id="r-max" inputmode="decimal" placeholder="Без лимита" value="' + kopToInput(rs.max) + '"></div></div>' +
     '<p class="xs muted" style="margin-top:8px">Минимум обеспечивается в первую очередь. Максимум не даёт конверту расти выше этой суммы.</p>' +
@@ -170,6 +171,8 @@ function scrSettings() {
   h += '<div class="sect"><h2>Деньги</h2></div><div class="card">' + moneyHTML() + '</div>';
   h += '<div class="sect"><h2>Правила и категории</h2></div><div class="list"><button class="li" data-a="rules"><div class="sp"><div class="t">Правила распределения</div><div class="s">Суммы, проценты и приоритеты</div></div>' + ic('r').replace('<svg', '<svg width="20" height="20" style="stroke:var(--muted);fill:none;stroke-width:2"') + '</button><button class="li" data-a="wizard"><div class="sp"><div class="t">Пройти мастер настройки заново</div><div class="s">Ничего не удалится</div></div></button></div>';
   h += catManage();
+  h += '<div class="sect"><h2>Курсы валют</h2></div><div class="card stack"><p class="sm">Расходы в другой валюте (например, в отпуске) пересчитываются в ' + esc(S.settings.currency) + ' по курсу и попадают в обычные расходы. Курс подгружается из интернета, а при его отсутствии можно ввести вручную.</p><div class="xs muted">' + (S.fx && S.fx.base === S.settings.currency && S.fx.at ? 'Курсы загружены ' + new Date(S.fx.at).toLocaleString('ru-RU') : 'Курсы ещё не загружались') + '</div><button class="btn block" data-a="fxRefresh" data-p="">Обновить курсы</button></div>';
+  h += '<div class="sect"><h2>Быстрая запись голосом</h2></div><div class="card stack"><p class="sm">Запись траты без открытия приложения: ярлык на главный экран телефона.</p><button class="btn block" data-a="voiceHelp">Как добавить на главный экран</button></div>';
   h += '<div class="sect"><h2>Данные</h2></div><div class="card stack"><p class="sm">Все данные хранятся только в этом браузере на этом устройстве. Между телефоном и компьютером они не синхронизируются. Если очистить данные сайта, они пропадут, поэтому иногда делайте резервную копию.</p>' +
     '<button class="btn block" data-a="export">Создать резервную копию</button><div id="bk-w" hidden class="stack"><textarea class="ta code" id="bk" readonly aria-label="Резервная копия"></textarea><button class="btn soft block" data-a="copy">Скопировать копию</button><p class="xs muted">Вставьте скопированный текст в заметки или отправьте себе. Скачивание файла в этом окне недоступно.</p></div>' +
     '<div class="hr"></div><label class="f" style="margin:0" for="imp">Восстановить из копии</label><textarea class="ta code" id="imp" placeholder="Вставьте текст копии сюда"></textarea><input type="file" id="imp-file" accept=".json,application/json,text/plain" data-c="impFile" aria-label="Выбрать файл копии"><div class="errt" id="imp-err"></div><button class="btn block" data-a="import">Проверить и восстановить</button></div>';
@@ -225,10 +228,10 @@ function openScreen(n) { ui.screen = n; renderScreen(true); }
 /* ---------- категории: служебное ---------- */
 function openCatEdit(id) {
   const c = L.cat(S, id); if (!c) return;
-  setSheet('<h2>Изменить категорию</h2><label class="f" for="f-name">Название</label><input class="in" id="f-name" maxlength="50" value="' + esc(c.name) + '" data-focus><label class="f" for="f-grp">Группа</label><select class="sel" id="f-grp">' + S.groups.map((g) => '<option value="' + g.id + '"' + (g.id === c.groupId ? ' selected' : '') + '>' + esc(g.name) + '</option>').join('') + '</select><div class="errt" id="f-err"></div><div class="foot"><button class="btn primary block" data-a="catSave" data-id="' + id + '">Сохранить</button><button class="btn danger block" data-a="catDel" data-id="' + id + '">Удалить категорию</button><button class="btn block" data-a="close">Отмена</button></div>');
+  setSheet('<h2>Изменить категорию</h2><label class="f" for="f-name">Название</label><input class="in" id="f-name" maxlength="50" value="' + esc(c.name) + '" data-focus><label class="f" for="f-grp">Группа</label><select class="sel" id="f-grp">' + S.groups.map((g) => '<option value="' + g.id + '"' + (g.id === c.groupId ? ' selected' : '') + '>' + esc(g.name) + '</option>').join('') + '</select>' + iconPicker('cat', c.icon || '', { name: c.name }) + '<div class="errt" id="f-err"></div><div class="foot"><button class="btn primary block" data-a="catSave" data-id="' + id + '">Сохранить</button><button class="btn danger block" data-a="catDel" data-id="' + id + '">Удалить категорию</button><button class="btn block" data-a="close">Отмена</button></div>');
 }
 function openCatNew(g) {
-  openSheet('<h2>Новая категория</h2><label class="f" for="f-name">Название</label><input class="in" id="f-name" maxlength="50" placeholder="Например: Питомцы" data-focus><div class="errt" id="f-err"></div><div class="foot"><button class="btn primary block" data-a="catSave" data-g="' + g + '" data-id="">Создать</button><button class="btn block" data-a="close">Отмена</button></div>');
+  openSheet('<h2>Новая категория</h2><label class="f" for="f-name">Название</label><input class="in" id="f-name" maxlength="50" placeholder="Например: Питомцы" data-focus>' + iconPicker('cat', '', { name: '' }) + '<div class="errt" id="f-err"></div><div class="foot"><button class="btn primary block" data-a="catSave" data-g="' + g + '" data-id="">Создать</button><button class="btn block" data-a="close">Отмена</button></div>');
 }
 function delCat(id) {
   const c = L.cat(S, id); if (!c) return;
@@ -268,7 +271,7 @@ const A = {
     commit(); closeSheet(); toast(d.mode === 'top' ? 'Конверт пополнен' : d.mode === 'move' ? 'Деньги перенесены' : 'Деньги возвращены в свободные');
   },
   recv: (d) => openIncome({ slot: d.slot }), incExtra: (d) => openIncome({ only: 'extra', fromMenu: !!d.menu }), recvOnly: (d) => openIncome({ only: 'slot', fromMenu: !!d.menu }),
-  fabMenu: () => openSheet('<h2>Что добавить?</h2><div class="stack" style="margin-top:12px">' + [['expNew', 'Расход', 'Трата из категории: продукты, транспорт, кафе'], ['incExtra', 'Доход', 'Дополнительные деньги не по плану: подработка, подарок'], ['recvOnly', 'Поступление', 'Плановые деньги месяца: аванс, зарплата']].map((x) => '<button class="card" style="text-align:left;min-height:68px;width:100%" data-menu="1" data-a="' + x[0] + '"><div style="font-weight:600;font-size:18px">' + x[1] + '</div><div class="sm muted">' + x[2] + '</div></button>').join('') + '</div><div class="foot"><button class="btn block" data-a="close">Отмена</button></div>'),
+  fabMenu: () => openSheet('<h2>Что добавить?</h2><div class="stack" style="margin-top:12px">' + [['expNew', 'Расход', 'Трата из категории: продукты, транспорт, кафе'], ['incExtra', 'Доход', 'Дополнительные деньги не по плану: подработка, подарок'], ['recvOnly', 'Поступление', 'Плановые деньги месяца: аванс, зарплата'], ['billNew', 'Платёж', 'Регулярный или разовый платёж: кредит, подписка, аренда']].map((x) => '<button class="card" style="text-align:left;min-height:68px;width:100%" data-menu="1" data-a="' + x[0] + '"><div style="font-weight:600;font-size:18px">' + x[1] + '</div><div class="sm muted">' + x[2] + '</div></button>').join('') + '</div><div class="foot"><button class="btn block" data-a="close">Отмена</button></div>'),
   qOpen: () => openQuick(true),
   qMic: () => { if (listening) stopListen(); else startListen(); },
   qSave: () => saveQuick(),
@@ -278,9 +281,20 @@ const A = {
     if (a) document.getElementById('f-amount').value = kopToInput(a);
     document.getElementById('f-title').value = title;
     document.getElementById('f-date').value = date.slice(8) + '.' + date.slice(5, 7) + '.' + date.slice(0, 4);
-    expInfo(null);
+    const qc = document.getElementById('q-cur').value;
+    if (qc) { document.getElementById('f-cur').value = qc; document.getElementById('f-rate').value = document.getElementById('q-rate').value; document.getElementById('f-ratew').hidden = false; }
+    expInfo(null); fxInfoUpd('f');
   },
   gender: (d) => { S.settings.gender = d.g; commit(); },
+  debtNew: () => openDebtEdit(null), debtOpen: (d) => openDebt(d.id), debtEdit: (d) => openDebtEdit(d.id), debtSave: (d) => saveDebt(d.id), debtPay: (d) => payDebtUi(d.id),
+  debtDir: (d, el) => { document.getElementById('d-dir').value = d.v; el.parentNode.querySelectorAll('button').forEach((b) => b.classList.toggle('on', b === el)); },
+  debtPayDel: (d) => { const x = S.debts.find((q) => q.id === d.id); if (x) { x.paid.splice(+d.i, 1); commit(); openDebt(d.id); } },
+  debtDel: (d) => { const x = S.debts.find((q) => q.id === d.id); ask({ title: 'Удалить долг?', text: esc(x ? x.who : '') + ' · ' + fmt(x ? x.amount : 0), ok: 'Удалить', danger: true, onOk: () => { S.debts = S.debts.filter((q) => q.id !== d.id); commit(); toast('Долг удалён'); } }); },
+  goalOpen: (d) => openGoal(d.id), goalSave: (d) => saveGoal(d.id),
+  goalDel: (d) => { const c = L.cat(S, d.id); c.goal = null; if (c.rule.type === 'goal') c.rule.type = 'manual'; commit(); openCat(d.id); toast('Цель убрана'); },
+  icoPick: (d) => { const nm = (document.getElementById('f-name') || {}).value; icoSet(d.t, d.v, nm); const e = document.getElementById('ipk-' + d.t + '-e'); if (e) e.value = ''; },
+  fxRefresh: async (d) => { const ok = await refreshRates(false); if (ok && d.p) fxChanged(d.p); else if (ok) render(); },
+  voiceHelp: () => openSheet(voiceHelpHTML()),
   alloc: () => openAlloc({ month: ui.month }),
   expNew: (d) => openExpense({ cat: d.cat, fromMenu: !!d.menu }),
   pickCat: (d) => { expSel = d.id; document.querySelectorAll('#ov .chip[data-a="pickCat"]').forEach((e) => e.classList.toggle('on', e.dataset.id === d.id)); expInfo(editTx()); },
@@ -301,7 +315,7 @@ const A = {
   agOpen: (d) => openAg(d.id),
   agDel: (d) => { const g = L.allocGroups(S).find((x) => x.key === d.id); if (!g) return; ask({ title: 'Удалить запись?', text: 'Деньги вернутся туда, откуда были выделены. Баланс на руках не изменится.', ok: 'Удалить', danger: true, onOk: () => { L.deleteAllocGroup(S, g.items.map((a) => a.id)); commit(); toast('Запись удалена'); } }); },
   hAll: () => { ui.fAll = !ui.fAll; render(false); }, hType: (d) => { ui.fType = d.t; render(); },
-  billNew: () => openBill(null), billEdit: (d) => openBill(d.b), billSave: (d) => saveBill(d.b, !!d.more),
+  billNew: (d) => openBill(null, d && d.menu ? { fromMenu: true } : undefined), billEdit: (d) => openBill(d.b), billSave: (d) => saveBill(d.b, !!d.more),
   billDel: (d) => { const b = S.bills.find((x) => x.id === d.b); ask({ title: 'Удалить платёж «' + b.name + '»?', text: 'Прошлые оплаты останутся в истории расходов.', ok: 'Удалить', danger: true, onOk: () => { S.bills = S.bills.filter((x) => x.id !== b.id); commit(); toast('Платёж удалён'); } }); },
   pay: (d) => openPay(d.b, d.d), payOpen: (d) => openPay(d.b, d.d),
   paySave: (d) => {
@@ -320,6 +334,7 @@ const A = {
     ruleCollect();
     if ((rs.type === 'pctIncome' || rs.type === 'pctRemainder') && !(rs.pct > 0 && rs.pct <= 100)) return void ($('#f-err').textContent = 'Процент должен быть от 0 до 100');
     if ((rs.type === 'fixedMonth' || rs.type === 'fixedEach') && !(rs.amount > 0)) return void ($('#f-err').textContent = 'Введите сумму больше нуля');
+    if (rs.type === 'goal' && !L.cat(S, rs.id).goal) return void ($('#f-err').textContent = 'Сначала задайте цель: сумму и дату в карточке категории');
     if (rs.max > 0 && rs.min > rs.max) return void ($('#f-err').textContent = 'Минимум не может быть больше максимума');
     const c = L.cat(S, rs.id); c.rule = { type: rs.type, amount: rs.amount, pct: rs.pct, priority: rs.priority, min: rs.min, max: rs.max };
     commit(); closeSheet(); toast('Правило сохранено');
@@ -328,8 +343,8 @@ const A = {
   catNew: (d) => openCatNew(d.g), catEdit: (d) => openCatEdit(d.id),
   catSave: (d) => {
     const name = val('f-name').trim(); if (!name) return void ($('#f-err').textContent = 'Введите название');
-    if (d.id) { const c = L.cat(S, d.id); c.name = name; if (val('f-grp') && val('f-grp') !== c.groupId) { c.groupId = val('f-grp'); } }
-    else { const g = L.group(S, d.g); S.cats.push(L.newCat(g.id, name, g.kind)); }
+    if (d.id) { const c = L.cat(S, d.id); c.name = name; c.icon = icoState.cat || ''; if (val('f-grp') && val('f-grp') !== c.groupId) { c.groupId = val('f-grp'); } }
+    else { const g = L.group(S, d.g); const nc = L.newCat(g.id, name, g.kind); nc.icon = icoState.cat || ''; S.cats.push(nc); }
     commit(); closeSheet(); toast('Сохранено');
   },
   catDel: (d) => { closeSheet(); delCat(d.id); }, catUp: (d) => swapCat(d.id, -1), catDn: (d) => swapCat(d.id, 1),
@@ -386,6 +401,9 @@ const I = {
     w.innerHTML = d > 0 ? '<div class="banner bad"><div><b>Не хватит на платежи.</b> Эти деньги отложены на неоплаченные платежи категории. После операции не хватит ' + fmt(d) + '.</div></div>' : '';
   },
   expAmt: () => expInfo(editTx()),
+  icoEmoji: (el) => { const v = Array.from(el.value.trim()).slice(0, 2).join(''); icoSet(el.dataset.t, v, (document.getElementById('f-name') || {}).value); },
+  fxRate: (el) => { el.dataset.touched = '1'; fxAfter(el.dataset.p); },
+  goalLive: () => goalLive(),
   qText: () => qUpdate(), qAmt: () => { qk.amtManual = true; qCheck(); },
   pv: () => pvLive(),
   catName: (el) => { const c = L.cat(S, el.dataset.id); if (c && el.value.trim()) { c.name = el.value.trim(); save(); } },
@@ -393,7 +411,7 @@ const I = {
   planDay: (el) => { const p = S.plan.find((x) => x.id === el.dataset.id), n = parseInt(el.value, 10); el.classList.toggle('err', !(n >= 1 && n <= 31)); if (p && n >= 1 && n <= 31) { p.day = n; if (p.dayTo && p.dayTo <= n) { p.dayTo = 0; const t = document.getElementById('pt-' + p.id); if (t) t.value = ''; } planHintUpd(p); save(); } },
   planDayTo: (el) => { const p = S.plan.find((x) => x.id === el.dataset.id), raw = el.value.trim(), n = parseInt(raw, 10); if (raw === '') { el.classList.remove('err'); if (p) { p.dayTo = 0; planHintUpd(p); save(); } return; } const okv = n > p.day && n <= 31; el.classList.toggle('err', !okv); if (okv) { p.dayTo = n; planHintUpd(p); save(); } },
   profName: (el) => { S.settings.name = el.value.trim().slice(0, 30); save(); },
-  dateMask: (el, e) => { const v = maskDate(el.value, e && e.inputType && e.inputType.indexOf('delete') === 0); if (v !== el.value) el.value = v; const pk = el.parentNode.querySelector('.calp'); if (pk) { const iso = readDate(el.value); pk.value = iso && iso !== 'invalid' ? iso : ''; } },
+  dateMask: (el, e) => { const v = maskDate(el.value, e && e.inputType && e.inputType.indexOf('delete') === 0); if (v !== el.value) el.value = v; const pk = el.parentNode.querySelector('.calp'); if (pk) { const iso = readDate(el.value); pk.value = iso && iso !== 'invalid' ? iso : ''; } if (document.getElementById('g-prev')) goalLive(); },
   planAmt: (el) => { const p = S.plan.find((x) => x.id === el.dataset.id), v = el.value.trim() === '' ? 0 : L.parseMoney(el.value); el.classList.toggle('err', v === null); if (p && v !== null) { p.amount = v; save(); } },
   startBal: (el) => { const v = el.value.trim() === '' ? 0 : L.parseMoney(el.value, true); el.classList.toggle('err', v === null); if (v !== null) { S.settings.startBalance = v; save(); } },
   resPct: (el) => { const v = el.value.trim() === '' ? 0 : parseFloat(el.value.replace(',', '.')); el.classList.toggle('err', !(v >= 0 && v <= 100)); if (v >= 0 && v <= 100) { S.settings.reservePct = v; save(); } },
@@ -406,8 +424,10 @@ const C = {
   pvFresh: (el) => { ui.pv.fresh = el.checked; pvCompute(); },
   cur: (el) => { S.settings.currency = el.value; commit(); },
   cents: (el) => { S.settings.cents = el.value; commit(); },
-  datePick: (el) => { const t = document.getElementById(el.dataset.for); if (t && el.value) { t.value = el.value.slice(8) + '.' + el.value.slice(5, 7) + '.' + el.value.slice(0, 4); t.classList.remove('err'); } },
+  datePick: (el) => { const t = document.getElementById(el.dataset.for); if (t && el.value) { t.value = el.value.slice(8) + '.' + el.value.slice(5, 7) + '.' + el.value.slice(0, 4); t.classList.remove('err'); if (document.getElementById('g-prev')) goalLive(); } },
   qCat: () => { qk.catManual = true; qCheck(); },
+  fxCur: (el) => { const p = el.id.split('-')[0]; if (p === 'q') qk.curManual = true; fxChanged(p); },
+  icoFile: (el) => { const f = el.files && el.files[0]; if (!f) return; resizeImage(f, (u) => { if (u) icoSet(el.dataset.t, u, (document.getElementById('f-name') || {}).value); else toast('Не удалось прочитать картинку'); }); },
   wizType: (el) => { const c = L.cat(S, el.dataset.id); c.rule.type = el.value; commit(); },
   impFile: (el) => { const f = el.files && el.files[0]; if (!f) return; const r = new FileReader(); r.onload = () => { document.getElementById('imp').value = String(r.result || ''); }; r.readAsText(f); },
 };
@@ -427,3 +447,4 @@ S = load();
 if (!S.settings.setupDone) { ui.screen = 'wizard'; ui.wiz = 0; }
 if (L.monthOf(L.today()) < S.settings.trackFrom) ui.month = S.settings.trackFrom;
 render();
+try { if (/[?&]voice=1/.test(location.search) && S.settings.setupDone) { history.replaceState(null, '', location.pathname); setTimeout(() => openQuick(true), 150); } } catch (e) { /* не критично */ }
